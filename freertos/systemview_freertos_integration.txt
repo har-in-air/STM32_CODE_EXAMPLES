@@ -1,0 +1,143 @@
+integrating SystemView into FreeRTOS project in STM32CubeIDE
+
+1. Download Systemview target sources matching with binary release and extract
+SystemView_Src_V331
+    /Config
+        Global.h
+        SEGGER_RTT_Conf.h
+        SEGGER_SYSVIEW_Conf.h
+    /Sample
+        /FreeRTOSV10
+            /Config
+                /Cortex-M
+                    SEGGER_SYSVIEW_Config_FreeRTOS.c
+            /Patch
+                FreeRTOSV10_Core.patch
+            SEGGER_SYSVIEW_FreeRTOS.c
+            SEGGER_SYSVIEW_FreeRTOS.h        
+    /SEGGER
+        Everything except for /Syscalls
+        
+    UM08027_SystemView_Manual
+
+2. Create folder structure under ThirdParty, and make sure none of them are
+   excluded from build, now populate tree from the source archive
+ 
+SEGGER
+    /Config
+        Global.h
+        SEGGER_RTT_Conf.h
+        SEGGER_SYSVIEW_Conf.h   
+        SEGGER_SYSVIEW_Config_FreeRTOS.c
+        
+    /OS
+        SEGGER_SYSVIEW_FreeRTOS.c
+        SEGGER_SYSVIEW_FreeRTOS.h        
+        
+    /Patch
+        /FreeRTOSv10.3.1
+            FreeRTOSV10_Core.patch
+    /SEGGER
+        Everything from src /SEGGER except for /Syscalls
+    
+ 3. include path for C/C++build, add
+        SEGGER/Config
+        SEGGER/OS
+        SEGGER/SEGGER
+    include path for ASM build (because .S file in /SEGGER includes portmacro.h)
+        FreeRTOS/org/Source/portable/GCC/ARM_CM4F
+    
+4. Patching 
+    RClick on project  /FreeRTOS, menu Team     - Apply Path - select patch file
+    browse for FreeRTOSV10_Core.patch and select, next
+    finish patching
+    
+5. Edit FreeRTOSConfig.h
+    Add two #defines to list
+    #define INCLUDE_xTaskGetIdleTaskHandle 1
+    #define INCLUDE_pxTaskGetStackStart     1
+    
+    Add #include "SEGGER_SYSVIEW_FreeRTOS.h" at end of file
+    
+ 6. Edit SEGGER_SYSVIEW_Conf.h
+ 
+    #define SEGGER_SYSVIEW_CORE SEGGER_SYSVIEW_CORE_CM3
+           
+    #define SEGGER_SYSVIEW_RTT_BUFFER_SIZE (1024*8)  if you have 128kbytes no problem
+    
+ 7. Edit SEGGER_SYSVIEW_Config_FreeRTOS.c
+    #define SYSVIEW_APP_NAME    "FreeRTOS Udemy"
+    #define SYSVIEW_DEVICE_NAME  "STM32F411CEU"
+    
+    #defeine SYSVIEW_RAM_BASE    0x20000000  (start of RAM for your micro)
+    
+ 8. Enable CycleCounter : edit main.c, first statement should be
+    DWT->CTRL |= (1<<0);  
+    
+ 9. Add statements in main.c before any FreeRTOS statements
+  
+    SEGGER_SYSVIEW_Conf();
+    vSetVarulMaxPRIGROUPValue();
+    SEGGER_SYSVIEW_Start();    
+ 
+ To avoid configAssert error in SEGGER_SYSVIEW_Start() caused by 
+ un-initialized variable ulMaxPRIGROUP, need to edit port.c to 
+ add an initialization function and call it before SEGGER_SYSVIEW_Start()
+ as above.
+ 
+Add declaration below in file portmacro.h
+#ifdef configASSERT
+	void vSetVarulMaxPRIGROUPValue( void );
+#endif
+
+
+Add function below at end of file port.c
+
+#if( configASSERT_DEFINED == 1 )
+void vSetVarulMaxPRIGROUPValue( void )
+{
+	volatile uint8_t * const pucFirstUserPriorityRegister = ( volatile uint8_t * const ) ( portNVIC_IP_REGISTERS_OFFSET_16 + portFIRST_USER_INTERRUPT_NUMBER );
+	volatile uint8_t ucMaxPriorityValue;
+	/* Determine the number of priority bits available.  First write to all
+	possible bits. */
+	*pucFirstUserPriorityRegister = portMAX_8_BIT_VALUE;
+	/* Read the value back to see how many bits stuck. */
+	ucMaxPriorityValue = *pucFirstUserPriorityRegister;
+	/* Calculate the maximum acceptable priority group value for the number
+	of bits read back. */
+	ulMaxPRIGROUPValue = portMAX_PRIGROUP_BITS;
+	while( ( ucMaxPriorityValue & portTOP_BIT_OF_BYTE ) == portTOP_BIT_OF_BYTE )
+	{
+		ulMaxPRIGROUPValue--;
+		ucMaxPriorityValue <<= ( uint8_t ) 0x01;
+	}
+#ifdef __NVIC_PRIO_BITS
+	{
+		/* Check the CMSIS configuration that defines the number of
+		priority bits matches the number of priority bits actually queried
+		from the hardware. */
+		configASSERT( ( portMAX_PRIGROUP_BITS - ulMaxPRIGROUPValue ) == __NVIC_PRIO_BITS );
+	}
+#endif
+#ifdef configPRIO_BITS
+	{
+		/* Check the FreeRTOS configuration that defines the number of
+		priority bits matches the number of priority bits actually queried
+		from the hardware. */
+		configASSERT( ( portMAX_PRIGROUP_BITS - ulMaxPRIGROUPValue ) == configPRIO_BITS );
+	}
+#endif
+	/* Shift the priority group value back to its position within the AIRCR
+	register. */
+	ulMaxPRIGROUPValue <<= portPRIGROUP_SHIFT;
+	ulMaxPRIGROUPValue &= portPRIORITY_GROUP_MASK;
+}
+#endif /* conifgASSERT_DEFINED */
+ 
+10. To trace software timer callbacks, add this to SEGGER/OS/SEGGER_SYSVIEW_FreeRTOS.h and add the
+directory to the C/C++ build settings include paths
+
+#define traceTIMER_ENTER(pxTimer)					SEGGER_SYSVIEW_RecordEnterTimer((U32)pxTimer)
+#define traceTIMER_EXIT()							SEGGER_SYSVIEW_RecordExitTimer()
+ 
+ 
