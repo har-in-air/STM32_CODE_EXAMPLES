@@ -1,21 +1,8 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+// WeAct v1.3 STM32F411CEU6 dev board
+// mutual exclusion using binary semaphore to control task access to
+// the uart (shared resource)
+//
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -24,11 +11,13 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +31,6 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define printBuf() HAL_UART_Transmit(&huart1, (uint8_t*)szBuf, strlen(szBuf), 500)
 
 /* USER CODE END PM */
 
@@ -63,88 +51,43 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-char szBuf[80];
 TaskHandle_t xTaskHandle1 = NULL;
 TaskHandle_t xTaskHandle2 = NULL;
 
-void vTask1_handler(void* pParams);
-void vTask2_handler(void* pParams);
+void vTask1(void* pParams);
+void vTask2(void* pParams);
 
-#ifdef USE_SEMI_HOSTING
-// for printf retargeted to semi-hosting to STM32CubeIDE console
-extern void initialise_monitor_handles();
-#endif
+xSemaphoreHandle xBinarySemaphore;
 
-#define USE_SWO
+
+//#define USE_SWO
 
 #ifdef USE_SWO
 
-/*!
- * \brief Initialize the SWO trace port for debug message printing
- * \param portBits Port bit mask to be configured
- * \param cpuCoreFreqHz CPU core clock frequency in Hz
- */
-void SWO_Init(uint32_t portBits, uint32_t cpuCoreFreqHz) {
-  uint32_t SWOSpeed = 64000; /* default 64k baud rate */
-  uint32_t SWOPrescaler = (cpuCoreFreqHz / SWOSpeed) - 1; /* SWOSpeed in Hz, note that cpuCoreFreqHz is expected to be match the CPU core clock */
-
-  CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk; /* enable trace in core debug */
-  *((volatile unsigned *)(ITM_BASE + 0x400F0)) = 0x00000002; /* "Selected PIN Protocol Register": Select which protocol to use for trace output (2: SWO NRZ, 1: SWO Manchester encoding) */
-  *((volatile unsigned *)(ITM_BASE + 0x40010)) = SWOPrescaler; /* "Async Clock Prescaler Register". Scale the baud rate of the asynchronous output */
-  *((volatile unsigned *)(ITM_BASE + 0x00FB0)) = 0xC5ACCE55; /* ITM Lock Access Register, C5ACCE55 enables more write access to Control Register 0xE00 :: 0xFFC */
-  ITM->TCR = ITM_TCR_TraceBusID_Msk | ITM_TCR_SWOENA_Msk | ITM_TCR_SYNCENA_Msk | ITM_TCR_ITMENA_Msk; /* ITM Trace Control Register */
-  ITM->TPR = ITM_TPR_PRIVMASK_Msk; /* ITM Trace Privilege Register */
-  ITM->TER = portBits; /* ITM Trace Enable Register. Enabled tracing on stimulus ports. One bit per stimulus port. */
-  *((volatile unsigned *)(ITM_BASE + 0x01000)) = 0x400003FE; /* DWT_CTRL */
-  *((volatile unsigned *)(ITM_BASE + 0x40304)) = 0x00000100; /* Formatter and Flush Control Register */
-}
-
-// for printf retargeted to SWV trace console
-int _write(int file, char* szMsg, int len) {
-	for (int inx = 0; inx < len; inx++){
-		ITM_SendChar(*szMsg++);
-	}
-	return len;
-}
-
-/*!
- * \brief Sends a character over the SWO channel
- * \param c Character to be sent
- * \param portNo SWO channel number, value in the range of 0 to 31
- */
-void SWO_PrintChar(char c, uint8_t portNo) {
-  volatile int timeout;
-
-  /* Check if Trace Control Register (ITM->TCR at 0xE0000E80) is set */
-  if ((ITM->TCR&ITM_TCR_ITMENA_Msk) == 0) { /* check Trace Control Register if ITM trace is enabled*/
-    return; /* not enabled? */
-  }
-  /* Check if the requested channel stimulus port (ITM->TER at 0xE0000E00) is enabled */
-  if ((ITM->TER & (1ul<<portNo))==0) { /* check Trace Enable Register if requested port is enabled */
-    return; /* requested port not enabled? */
-  }
-  timeout = 5000; /* arbitrary timeout value */
-  while (ITM->PORT[0].u32 == 0) {
-    /* Wait until STIMx is ready, then send data */
-    timeout--;
-    if (timeout==0) {
-      return; /* not able to send */
-    }
-  }
-  ITM->PORT[0].u16 = 0x08 | (c<<8);
-}
-
-/*!
- * \brief Sends a string over SWO to the host
- * \param s String to send
- * \param portNumber Port number, 0-31, use 0 for normal debug strings
- */
-void SWO_PrintString(const char *s, uint8_t portNumber) {
-  while (*s!='\0') {
-    SWO_PrintChar(*s++, portNumber);
-  }
+// printf retargeted to SWV ITM Data Console
+int __io_putchar(int ch) {
+	ITM_SendChar(ch);
+	return ch;
 }
 #endif
+
+void printUartSz(char *msg){
+	for(int inx = 0; inx < strlen(msg); inx++)	{
+		while (!(huart1.Instance->SR & UART_FLAG_TXE));
+		huart1.Instance->DR = (uint16_t) msg[inx];
+		}
+	while (!(huart1.Instance->SR & UART_FLAG_TC));
+	}
+
+void printUart(char *format,...){
+	char str[120];
+	va_list args;
+	va_start(args, format);
+	vsprintf(str, format,args);
+	printUartSz(str);
+	va_end(args);
+ 	}
+
 /* USER CODE END 0 */
 
 /**
@@ -176,17 +119,9 @@ int main(void)
   SystemCoreClockUpdate();
   HAL_Delay(500); // leave this here so that JLink/STlink can connect to cpu after reset
 
-#ifdef USE_SEMI_HOSTING
-  initialise_monitor_handles();
-  printf("hello from semi hosting\r\n");
-#endif
 
 #ifdef USE_SWO
-#define CPU_CORE_FREQUENCY_HZ 16000000 /* CPU core frequency in Hz */
-
-SWO_Init(0x1, CPU_CORE_FREQUENCY_HZ);
-  //printf("hello from SWO debug\r\n");
-SWO_PrintString("hello world with SWO\r\n", 0);
+  printf("hello from SWO\r\n");
 #endif
 
   /* USER CODE END SysInit */
@@ -196,17 +131,38 @@ SWO_PrintString("hello world with SWO\r\n", 0);
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   //HAL_Delay(2000);
-  sprintf(szBuf, "SystemCoreClock %lu\r\n", SystemCoreClock);
-  printBuf();
+  printUart("SystemCoreClock %lu\r\n", SystemCoreClock);
 
   SEGGER_SYSVIEW_Conf();
   vSetVarulMaxPRIGROUPValue();
   SEGGER_SYSVIEW_Start();
 
-  xTaskCreate(vTask1_handler, "Task-1", configMINIMAL_STACK_SIZE, NULL, 2, &xTaskHandle1);
-  xTaskCreate(vTask2_handler, "Task-2", configMINIMAL_STACK_SIZE, NULL, 2, &xTaskHandle2);
+  printUart("Demo of Mutual exclusion using binary semaphore\r\n");
 
-  //vTaskStartScheduler();
+  vSemaphoreCreateBinary(xBinarySemaphore);
+
+  if (xBinarySemaphore != NULL)	 {
+	// Create one of the two tasks
+	xTaskCreate(vTask1,		// Pointer to the function that implements the task.
+				"Task 1",	// Text name for the task.  This is to facilitate debugging only.
+				500,		// Stack depth in words.
+				NULL,		// We are not using the task parameter.
+				1,			// This task will run at priority 1.
+				NULL );		// We are not using the task handle.
+
+	// Create the other task in exactly the same way. */
+	xTaskCreate( vTask2, "Task 2", 500, NULL, 1, NULL );
+
+	//makes sema available for the first time
+	xSemaphoreGive(xBinarySemaphore);
+
+	// Start the scheduler so our tasks start executing.
+	vTaskStartScheduler();
+	}
+  else{
+	printUart("binary semaphore creation failed\r\n");
+	}
+
   /* USER CODE END 2 */
  
  
@@ -219,9 +175,9 @@ SWO_PrintString("hello world with SWO\r\n", 0);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  // should never get here
 	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-	  sprintf(szBuf,"hello udemy %d\r\n", counter++);
-	  printBuf();
+	  printUart("hello udemy %d\r\n", counter++);
 	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
@@ -331,37 +287,45 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void vTask1_handler(void* pParams) {
 
-	static int Task1Counter = 0;
+void vTask1( void *pvParameters ){
+	const char *pcTaskName = "Task 1 is running\r\n";
 	while(1) {
-		Task1Counter++;
-		//vTaskDelay(1000);
-#ifdef USE_SEMI_HOSTING
-		printf("Task1Counter %d\r\n", Task1Counter);
-#endif
-		sprintf(szBuf,"Task1Counter %d\r\n", Task1Counter++);
-		printBuf();
-		taskYIELD();
-		//vTaskDelay(100);
-	}
-}
+		// before printing , take the semaphore
+		// semaphore value goes to 0
+		xSemaphoreTake( xBinarySemaphore, portMAX_DELAY );
 
-void vTask2_handler(void* pParams) {
+		// display task name
+		printUart("%s", pcTaskName);
 
-	static int Task2Counter = 0;
-	while(1) {
-		Task2Counter++;
-		//vTaskDelay(1000);
-#ifdef USE_SEMI_HOSTING
-		printf("Task2Counter %d\r\n", Task2Counter);
-#endif
-		sprintf(szBuf,"Task2Counter %d\r\n", Task2Counter++);
-		printBuf();
-		taskYIELD();
-		//vTaskDelay(100);
+		// give the semaphore here.
+		// increases the bin sema value back to 1
+		xSemaphoreGive(xBinarySemaphore);
+
+		// block this task for 500ms
+		vTaskDelay( pdMS_TO_TICKS(500) );
 		}
-}
+	}
+
+
+void vTask2( void *pvParameters ){
+	const char *pcTaskName = "Task 2 is running\r\n";
+	while(1) {
+		// before printing , take the semaphore
+		// semaphore value goes to 0
+		xSemaphoreTake( xBinarySemaphore, portMAX_DELAY );
+
+		// display task name
+		printUart("%s", pcTaskName);
+
+		// give the semaphore here.
+		// increases the bin sema value back to 1
+		xSemaphoreGive(xBinarySemaphore);
+
+		// block this task for 500ms
+		vTaskDelay( pdMS_TO_TICKS(500) );
+		}
+	}
 
 /* USER CODE END 4 */
 

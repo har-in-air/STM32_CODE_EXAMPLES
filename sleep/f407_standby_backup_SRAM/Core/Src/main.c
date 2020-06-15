@@ -24,7 +24,7 @@ void Error_Handler(void);
 void printMsg(char* format, ...);
 void checkBkpSRAM(void);
 
-// base address of backup sram in stm32f411xx.h : 0x40024000
+// base address of backup sram in stm32f407xx.h : 0x40024000
 uint8_t* pBkpSRAM = (uint8_t *) BKPSRAM_BASE;
 
 int main(void){

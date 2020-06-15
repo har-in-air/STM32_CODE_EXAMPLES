@@ -1,21 +1,34 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+/* Weact v1.3 STM32F411CEU6 dev board
+1. 	Cubemx ioc, ensure SYS->Debug is set to 'Asychronous Trace' so that SWO, SWD and SWCLK
+	pins are assigned alternate function (green)
+
+2. 	main.c redefine  _write function or __io_putchar() so that
+	printf is redirected to ITM module. Add only one of these.
+
+int _write(int file, char* szMsg, int len) {
+	for (int inx = 0; inx < len; inx++){
+		ITM_SendChar(*szMsg++);
+	    }
+	return len;
+    }
+-OR-
+int __io_putchar(int ch) {
+	ITM_SendChar(ch);
+	return ch;
+    }
+
+3. 	Add #include <stdio.h>
+4. 	STM32CubeIDE  project -> debug -> configuration -> Debugger
+	Select STLink GDB Server, enable Serial Wire Viewer, set the mcu clock to match with actual mcu
+	clock set in project
+5.	Flash the cpu, when the debugger is halted in main,
+	go to Window - View - enable SWV ITM Data Console window.
+	Click on settings icon,  enable channel 0
+	Click on record icon (red circle) to start trace.
+	Click on resume / step and you will see printf outputs on the ITM console window.
+	Click on record icon to stop tracing
+*/
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/

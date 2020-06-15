@@ -258,6 +258,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 #ifdef USE_BTN_INT
+
   /*Configure GPIO pin : PA6 */
   GPIO_InitStruct.Pin = GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -267,8 +268,10 @@ static void MX_GPIO_Init(void)
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0); // ensure interrupt priority is compatible with freeRTOS calls from isr
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
 #endif
 #ifdef USE_BTN_TASK
+
   /*Configure GPIO pin : PA6 */
   GPIO_InitStruct.Pin = GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -301,16 +304,18 @@ void ledTask(void* pParams) {
 }
 
 #ifdef USE_BTN_TASK
+
 void btnTask(void* pParams) {
 	while(1)	{
 		if(! HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6) ) {
-			// wait for 100ms to compensate for the button debouncing
-			busyDelay(100);
-			// send a notification to ledTask and increment its notification value
-			xTaskNotify(ledTaskHandle,
-					0x0, // not used
+			// wait for 50ms to compensate for the button debouncing
+			busyDelay(50);
+			if(! HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6) ) {
+				// send a notification to ledTask and increment its notification value
+				xTaskNotify(ledTaskHandle, 0x0, // not used
 					eIncrement); // increment receiving tasks notification value (which was zeroed on task creation)
-		}
+				}
+			}
 
 	}
 }

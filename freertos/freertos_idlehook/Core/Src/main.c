@@ -1,21 +1,8 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+// Weact v1.3 STM32F411CEU6
+// Demonstrate use of idle hook to send the cpu to sleep when no tasks are running,
+// it will wake up on next systick interrupt. Useful for saving power.
+
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -59,7 +46,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void vTask1_handler(void* pParams);
 void vTask2_handler(void* pParams);
-void printmsg(char *format,...);
+void printMsg(char *format,...);
 
 /* USER CODE END PFP */
 
@@ -68,7 +55,7 @@ void printmsg(char *format,...);
 TaskHandle_t xTaskHandle1 = NULL;
 TaskHandle_t xTaskHandle2 = NULL;
 
-void printmsg(char *format,...){
+void printMsg(char *format,...){
 	char str[80];
 	va_list args;
 	va_start(args, format);
@@ -115,7 +102,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  printmsg("SystemCoreClock %lu\r\n", SystemCoreClock);
+  printMsg("SystemCoreClock %lu\r\n", SystemCoreClock);
 
   SEGGER_SYSVIEW_Conf();
   vSetVarulMaxPRIGROUPValue();
@@ -137,8 +124,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  // should never get here
 	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-	  printmsg("main loop %d\r\n", counter++);
+	  printMsg("main loop %d\r\n", counter++);
 	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
@@ -250,8 +238,8 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void vTask1_handler(void *params){
 	while(1)	{
-		printmsg("Status of the LED is: %d\r\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_13));
-		vTaskDelay(pdMS_TO_TICKS(90));
+		printMsg("Status of the LED is: %d\r\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_13));
+		vTaskDelay(pdMS_TO_TICKS(80));
 		}
 	}
 
@@ -263,12 +251,11 @@ void vTask2_handler(void *params){
 		}
 	}
 
-void vApplicationIdleHook(void)
-{
-	//send the cpu to normal sleep
-	//__WFI();
-
-}
+void vApplicationIdleHook(void){
+	// send the cpu to normal sleep, wake from interrupt (Systick)
+	// can comment this WFI call to watch on SystemView
+	__WFI();
+	}
 
 /* USER CODE END 4 */
 
