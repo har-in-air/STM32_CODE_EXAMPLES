@@ -62,20 +62,7 @@ SystemCoreClockUpdate();
 
 /* USER CODE END SysInit */
 ```
-### Ubuntu 20.04 STM32CubeIDE OpenOCD GDB debugging 
 
-For error regarding gdb-version and libncurses, do this in /usr/lib
-```
-sudo ln -s libncursesw.so.6.1 libncurses.so.5
-sudo ln -s libncursesw.so.6.1 libtinfo.so.5
-
-sudo apt-get install libncurses5
-```
-* In project settings, goto debug, then under Debugger tab select autostart local gdb server
-* Debug probe = STLink (Stlink GDB Server)
-    * Interface SWD
-    * Access port 0-Cortex-M4
-    * rest defaults
 
 
 
