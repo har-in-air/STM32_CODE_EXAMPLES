@@ -4,7 +4,7 @@
 
 * Create a new STM32CubeIDE project for your specific micro 
 * Use CubeMx to configure on-board LED, Button gpio, uart, clock 
-* As per FreeRTOS, for better performance use TIM1 for time base, not SysTick
+* As per FreeRTOS, for better performance use a spare timer (e.g. TIM1) for time base, not SysTick
 * Build code and test
 * Under project folder, create a new folder /ThirdParty
 * Under /ThirdParty, create a new folder /FreeRTOS. Here you can add other modules like graphics, lwIP etc
