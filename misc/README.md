@@ -72,7 +72,7 @@ multiple function definition error
      
 * Configuration script
     * First select Automated Generation, apply, then copy the generated script to
-    another file with a different name, e.g. freertos_udemy_myDebug.cfg and 
+    another file with a different name, e.g. freertos_myDebug.cfg and 
     edit it so that the line is now
     ```
         reset_config srst_nogate connect_assert_srst
