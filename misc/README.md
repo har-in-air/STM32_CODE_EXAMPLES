@@ -1,11 +1,11 @@
 ## SWO trace 
 
-* in Cubemx, ensure SYS -> Debug is set to 'Asychronous Trace' so that SWO, SWD and SWCLK
+* in Cubemx, ensure SYS->Debug is set to 'Asychronous Trace' so that SWO, SWD and SWCLK
 pins are assigned alternate function (green)
 
 * in main.c redefine  _write function or __io_putchar() so that
  printf is redirected to ITM module. Add only one of these.
- 
+``` 
 int _write(int file, char* szMsg, int len) {
 	for (int inx = 0; inx < len; inx++){
 		ITM_SendChar(*szMsg++);
@@ -17,11 +17,12 @@ int __io_putchar(int ch) {
 	ITM_SendChar(ch);
 	return ch;
     }    
-
-* add #include <stdio.h> 
-* in cube ide  project - debug - configuration - Debugger
-  select STLink GDB Server, enable Serial Wire Viewer, set the mcu clock to match with actual mcu
-  clock set in project
+```
+* Add #include <stdio.h> 
+* Go to STM32CubeIDE->project->Debug->Configuration->Debugger
+   ** select STLink GDB Server
+   ** enable Serial Wire Viewer
+   ** set the mcu clock to match with actual mcu clock set in project
 * Flash the cpu, when the debugger is halted in main, 
  go to Window -> View > Enable SWV ITM Data Console window.
 * Click on ITM console window settings icon,  enable channel 0
@@ -44,9 +45,9 @@ window showing the JLink debugger programming progress, then immediately release
 For printf through SWD interface (slow), no need for UART initialization
  
 * Add Linker arguments
-
+```
 -specs=rdimon.specs -lc -lrdimon
-
+```
 to Project-Properties-C/C++Build-Linker-Miscellaneous (otherflags)
 
 * Project->Debug As->Debug Configuration->select IDE <project> Debug->Startup
@@ -55,10 +56,11 @@ paste below
 in initialization commands textbox
 
 * in main.c add
+```
 extern void initialize_monitor_handles();
 
 initialise_monitor_handles(); // add this before any printf statements
-
+```
 * Click on project syscalls.c, properties -> check exclude Resource from build to avoid
 multiple function definition error
 
