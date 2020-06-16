@@ -23,22 +23,23 @@ This has a file port.c which has the cpu dependent code for FreeRTOS.
 * Go to STM32CubeIDE and refresh project to show the ThirdParty folder and check the tree
 * Click on ThirdParty, menu Properties->C/C++ build, uncheck "exclude resource from build"
 * Go to Project properties, C/C++ build->Settings->Tool Settings->MCU GCC Compiler->Include Paths
-   ** add workspace/<your project>/ThirdParty/FreeRTOS/org/Source/include
-   ** add workspace/<your project>/ThirdParty/FreeRTOS/org/Source/portable/GCC/ARM-CM4F
+   * add workspace/<your project>/ThirdParty/FreeRTOS/org/Source/include
+   * add workspace/<your project>/ThirdParty/FreeRTOS/org/Source/portable/GCC/ARM-CM4F
 * Create a new /Config project subdirectory    
 * Goto archive FreeRTOS/Demo, search for a mcu compatible project, eg.
 CORTEX_M4F_STM32F407ZG-SK and copy FreeRTOSConfig.h to /Config
 * In project click on /Config, Properties - uncheck "exclude resource from build" 
 * Add /Config path to the project GCC compiler include path
 * Edit FreeRTOSConfig.h 
-** Move  'extern  uint32_t SystemCoreClock' to outside
+    * Move  'extern  uint32_t SystemCoreClock' to outside
 the #ifdef __ICCARM__, otherwise it will not be declared to the compiler
 
-** Set
+    * Set
+``` 
 #define configUSE_TICK_HOOK             0
 #define configCHECK_FOR_STACK_OVERFLOW	0
 #define configUSE_MALLOC_FAILED_HOOK	0
-
+```
 or you will  get undefined references to vApplicationTickHook, etc.
 
 * Edit project stm32f4xx_it.c . Comment out SV_Handler, PendSV_Handler and SysTickHandler as they
@@ -50,7 +51,7 @@ are defined in FreeRTOS ... port.c
 
 To test using default power-on  clock using HSI internal oscillator, even if you
 have the external clock and pll already defined using CubeMx, add couple of lines of code
-
+```
 /* Configure the system clock */
 SystemClock_Config();
 
@@ -60,22 +61,21 @@ HAL_RCC_DeInit(); // 16 MHz HSI
 SystemCoreClockUpdate();
 
 /* USER CODE END SysInit */
-
+```
 ### Ubuntu 20.04 STM32CubeIDE OpenOCD GDB debugging 
 
 For error regarding gdb-version and libncurses, do this in /usr/lib
-
+```
 sudo ln -s libncursesw.so.6.1 libncurses.so.5
 sudo ln -s libncursesw.so.6.1 libtinfo.so.5
 
 sudo apt-get install libncurses5
-
-In project settings, goto debug, then under Debugger tab
-select autostart local gdb server
-Debug probe = STLink (Stlink GDB Server)
-    Interface SWD
-    Access port 0-Cortex-M4
-    rest defaults
+```
+* In project settings, goto debug, then under Debugger tab select autostart local gdb server
+* Debug probe = STLink (Stlink GDB Server)
+    * Interface SWD
+    * Access port 0-Cortex-M4
+    * rest defaults
 
 
 
