@@ -1,4 +1,4 @@
-integrating SystemView into FreeRTOS project in STM32CubeIDE
+Integrating SystemView into FreeRTOS project in STM32CubeIDE
 
 1. Download Systemview target sources matching with binary release and extract
 SystemView_Src_V331
