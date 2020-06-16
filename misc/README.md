@@ -20,9 +20,9 @@ int __io_putchar(int ch) {
 ```
 * Add #include <stdio.h> 
 * Go to STM32CubeIDE->project->Debug->Configuration->Debugger
-   ** select STLink GDB Server
-   ** enable Serial Wire Viewer
-   ** set the mcu clock to match with actual mcu clock set in project
+    * select STLink GDB Server
+    * enable Serial Wire Viewer
+    * set the mcu clock to match with actual mcu clock set in project
 * Flash the cpu, when the debugger is halted in main, 
  go to Window -> View > Enable SWV ITM Data Console window.
 * Click on ITM console window settings icon,  enable channel 0
@@ -64,26 +64,27 @@ initialise_monitor_handles(); // add this before any printf statements
 * Click on project syscalls.c, properties -> check exclude Resource from build to avoid
 multiple function definition error
 
-* Project->Debug As->Debug Configurations->IDE < project>->Debug
-    Debugger
-    Select Autostart local GDB Server
-    Debug Probe ST-Link (OpenOCD)
-     openocd commmand = /usr/bin/openocd
-     openocd options = -f /usr/local/share/openocd/scripts/interface/stlink-v2.cfg
+* Project->Debug As->Debug Configurations->IDE < project>->Debug-> Debugger
+    * Select Autostart local GDB Server
+    * Debug Probe ST-Link (OpenOCD)
+    * openocd commmand = /usr/bin/openocd
+    * openocd options = -f /usr/local/share/openocd/scripts/interface/stlink-v2.cfg
      
-    Configuration script
-    First select Automated Generation, apply, then copy the generated script to
+* Configuration script
+    * First select Automated Generation, apply, then copy the generated script to
     another file with a different name, e.g. freertos_udemy_myDebug.cfg and 
     edit it so that the line is now
+    ```
         reset_config srst_nogate connect_assert_srst
-    The change is required to avoid connection error "target not halted".
-    Now go back to Configuration Script and select User defined and select the edited
+    ```
+    * The change is required to avoid connection error "target not halted".
+    * Now go back to Configuration Script and select User defined and select the edited
     script. The auto generated script is always regenerated on build so any changes
     will be lost. 
     
-    Note semihosting only works when Debug Probe is set to STLINK Openocd.
-    Semihosting does not work with STlink GDB Server, results in error 
-    not able to execute the initialization command
+* Note semihosting only works when Debug Probe is set to STLINK Openocd.
+  Semihosting does not work with STlink GDB Server, results in error 
+  not able to execute the initialization command
     "monitor arm semihosting enable "
 
 
