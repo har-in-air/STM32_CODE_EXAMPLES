@@ -2,6 +2,14 @@
 // DevEBox STM32F407VGT6 dev board
 // Demo mixed normal SPI and DMA SPI write to / read from on-board
 // Winbond 25Q16 serial flash
+// Separated out the DMA init and de-init code from the SPI init and deinit
+// code. So now you can use normal SPI transactions, then when you want to 
+// use DMA transfer, use hal_spi_dma_init() + dma transfer + hal_spi_dma_deinit()
+// and you can go back to normal SPI operations again.
+// This is how the flash write and read with DMA functions work. E.g. for 
+// write with DMA, use normal spi transactions to check if flash is busy, 
+// enable write and program the page address. Then DMA transfer for the data 
+// buffer.
 
 /* USER CODE END Header */
 
