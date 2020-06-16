@@ -252,8 +252,12 @@ void vTask2_handler(void *params){
 	}
 
 void vApplicationIdleHook(void){
-	// send the cpu to normal sleep, wake from interrupt (Systick)
-	// can comment this WFI call to watch on SystemView
+	// Send the cpu to sleep using wfi, wake on interrupt (next Systick)
+	// this is a good way to save power consumption when the cpu is not busy
+	// i.e. when idle task runs
+	
+	// If you want to trace the transitions to/from Idle task in SystemView
+	// comment this _WFI call.
 	__WFI();
 	}
 
