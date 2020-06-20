@@ -282,10 +282,12 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
     // Toggle the board LED rapidly
-    while (1) {
-        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-        HAL_Delay(50);
-        }
+	int counter = 0;
+	while (1) {
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+		while (counter < 0x3FFFF) {counter++;}
+		counter = 0;
+		}
   /* USER CODE END Error_Handler_Debug */
 }
 

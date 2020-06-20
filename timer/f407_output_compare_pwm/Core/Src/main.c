@@ -224,10 +224,12 @@ static void UART1_Init(void) {
 
 void Error_Handler(void){
     // Toggle the board LED rapidly
-    while (1) {
-        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-        HAL_Delay(50);
-        }
+	int counter = 0;
+	while (1) {
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+		while (counter < 0x3FFFF) {counter++;}
+		counter = 0;
+		}
     }
 
 
