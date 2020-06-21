@@ -42,6 +42,16 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan){
 	gpioConfig.Alternate = GPIO_AF9_CAN1;
 	HAL_GPIO_Init(GPIOA, &gpioConfig);
 
+	// lowest priority (15) ok for this example
+	HAL_NVIC_SetPriority(CAN1_TX_IRQn, 15, 0);
+	HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 15, 0);
+	HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 15, 0);
+	HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 15, 0);
+
+	HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
+	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+	HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
+	HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
 }
 
 

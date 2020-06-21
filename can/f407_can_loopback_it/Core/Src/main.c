@@ -34,15 +34,21 @@ int main(void){
     GPIO_Init();
     UART1_Init();
 
-    printMsg("CAN1 internal Loopback test\r\n");
+    printMsg("CAN1 internal Loopback test with interrupt\r\n");
 
     // bxCan on reset is in sleep mode
     // move to init mode by resetting bxCAN sleep bit sleep.inrq.ack
-    // and then configure parameters
+    // and then configure parameters. In init mode, bxCAN does not
+    // monitor RX line. Note we are initializing in loopback mode
     CAN1_Init();
 
     // configure acceptance filtering before moving to normal mode
     CAN_Filter_Config();
+
+    // enable interrupt-generating events of interest to our application
+    if (HAL_OK != HAL_CAN_ActivateNotification(&hcan1, CAN_IT_TX_MAILBOX_EMPTY | CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_BUSOFF)) {
+    	Error_Handler();
+    	}
 
     // move bxCAN from init to normal mode
     if (HAL_OK != HAL_CAN_Start(&hcan1)) {
@@ -63,7 +69,8 @@ int main(void){
 
     CAN1_Tx();
 
-    CAN1_RX();
+    // rx callback takes care of receive
+
     while (1) {
         }
     }
@@ -100,11 +107,18 @@ void CAN1_Init(void){
 	hcan1.Init.TimeSeg1 = CAN_BS1_8TQ;
     hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
 
+    // automatic retransmission on transmit errors
     hcan1.Init.AutoRetransmission = ENABLE;
-    hcan1.Init.AutoBusOff = DISABLE;
-    hcan1.Init.ReceiveFifoLocked = DISABLE; // overrun the oldest
+    // automatically recover from bus-off state when in normal mode.
+    // auto-receovery needs to see 128 sequences of 11 recessive bits on CANRX line before
+    // becoming bus active again. If disabled, sw has to take bxCAN to init
+    // and then normal mode again.
+    hcan1.Init.AutoBusOff = ENABLE;
+    // overrun the oldest received message if fifo is full
+    hcan1.Init.ReceiveFifoLocked = DISABLE;
     hcan1.Init.AutoWakeUp = DISABLE;
-    hcan1.Init.TransmitFifoPriority = DISABLE ; // transmission priority depends on message identifier, not chronological order
+    // transmission priority depends on message identifier, not chronological order
+    hcan1.Init.TransmitFifoPriority = DISABLE ;
     hcan1.Init.TimeTriggeredMode = DISABLE;
 
     if (HAL_OK != HAL_CAN_Init(&hcan1)){
@@ -143,10 +157,7 @@ void CAN1_Tx(void){
 	if (HAL_OK != HAL_CAN_AddTxMessage(&hcan1, &txhdr, msg, &TxMailBox)) {
 		Error_Handler();
 		}
-
-	// poll for tx complete
-	while (HAL_CAN_IsTxMessagePending(&hcan1, TxMailBox));
-	printMsg("Message Transmitted\r\n");
+	// tx callback will be triggered on complete
 	}
 
 
@@ -169,23 +180,39 @@ void CAN_Filter_Config(void){
 		}
 	}
 
-// set up acceptance filtering, direct accepted messages into a specified receive fifo (0 or 1)
-// the receive fifo can hold up to 3 messages.
-// check if any messages in the fifo, then retrieve the message payload into
-// destination buffer
-void CAN1_RX(void){
-	CAN_RxHeaderTypeDef rxhdr;
-	uint8_t rxmsg[5] = {0};
-	// wait until rXfifo has a message, returns value from 0 (empty) to 3 (full)
-	while (!HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0));
 
-	// get a can frame data payload from rxfifo into the destination data buffer
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
+	CAN_RxHeaderTypeDef rxhdr;
+	uint8_t rxmsg[100] = {0};
+	// get a can frame data payload from rxfifo 0 into the receive data buffer
 	if (HAL_OK != HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rxhdr, rxmsg)) {
 		Error_Handler();
 		}
-	printMsg("Message received : %s\r\n", rxmsg);
+	printMsg("Message received from rx FIFO 0 : %s\r\n", rxmsg);
 	}
 
+
+// CAN transmit scheduler decides which mailbbox the tx message is placed in.
+// so we need to monitor all 3 callbacks to see where our message was
+// transmitted from
+void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan){
+	printMsg("Message transmitted from tx mailbox 0\r\n");
+	}
+
+void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan){
+	printMsg("Message transmitted from tx mailbox 1\r\n");
+	}
+
+
+void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan){
+	printMsg("Message transmitted from tx mailbox 2\r\n");
+	}
+
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan){
+	printMsg("CAN1 Error!\r\n");
+	Error_Handler();
+	}
 
 void SystemClock_Config(void){
     // for high frequency 100MHz operation, we need to set voltage regulator scale 1

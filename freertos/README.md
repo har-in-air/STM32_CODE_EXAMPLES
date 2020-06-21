@@ -23,8 +23,8 @@ This has a file port.c which has the cpu dependent code for FreeRTOS.
 * Go to STM32CubeIDE and refresh project to show the ThirdParty folder and check the tree
 * Click on ThirdParty, menu Properties->C/C++ build, uncheck "exclude resource from build"
 * Go to Project properties, C/C++ build->Settings->Tool Settings->MCU GCC Compiler->Include Paths
-   * add workspace/<your project>/ThirdParty/FreeRTOS/org/Source/include
-   * add workspace/<your project>/ThirdParty/FreeRTOS/org/Source/portable/GCC/ARM-CM4F
+   * add workspace/your project/ThirdParty/FreeRTOS/org/Source/include
+   * add workspace/your project/ThirdParty/FreeRTOS/org/Source/portable/GCC/ARM-CM4F
 * Create a new /Config project subdirectory    
 * Goto archive FreeRTOS/Demo, search for a mcu compatible project, eg.
 CORTEX_M4F_STM32F407ZG-SK and copy FreeRTOSConfig.h to /Config
