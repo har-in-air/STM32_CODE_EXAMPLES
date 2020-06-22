@@ -13,7 +13,14 @@
 
 
 ## CAN Interrupts
+
 There are 4 IRQs allocated to CAN1 and CAN2 (8 total). This diagram shows the events that
 can generate interrupts and which IRQs they are associated with.
 
 <img src="bxcan_eventflags_interrupts.jpg"/>
+
+## MCP2551 transceiver module schematic
+
+I used the schematic below with R3 = 10K as that was the minimum value shown in the datasheet.
+
+<img src="mcp2551-skpang-can-module.png">

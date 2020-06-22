@@ -37,6 +37,9 @@ extern "C" {
 #include <stdarg.h>
 #include <string.h>
 
+extern UART_HandleTypeDef huart1;
+void printMsg(char* format, ...);
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
