@@ -5,16 +5,16 @@ The twisted-wire CAN 'bus' (black/white wires) is approximately 1m long. Bus bit
 The JLink debugger provides 5V Power supply for both boards and transceivers. Both boards are flashed
 with identical firmware. The MCP2551 transceivers operate at 5V, the STM32F407 CAN RX lines are 5V tolerant.
 
+If you press button PA0
+on a board, it starts transmitting as N1, and the other board responds as N2. External LEDs are connected to
+the board designated as N2 in my setup.
+
 A USB logic analyzer probes the CAN1_TX lines on both boards (PA12).
 Channel 0 of the logic analyzer is connected to the Node 1 CAN1_TX pin. Channel 1 is connected to 
 Node 2 CAN1_TX pin. A CAN bus protocol analyzer is added for both channels  with bus clock
 set to 500000. 
 
-4 seconds of data @24Msamples/sec was logged by the analyzer. You can see all the decoded frames on Node 1 and Node 2 TX lines on the right window pane.
-
-If you press button PA0
-on a board, it starts transmitting as N1, and the other board responds as N2. External LEDs are connected to
-the board designated as N2 in my setup.
+4 seconds of data @24Msamples/sec was logged by the logic analyzer. You can see the decoded frame details on Node 1 and Node 2 TX lines on the right window pane.
 
 <img src="hardware_setup.jpg"/>
 
@@ -29,7 +29,7 @@ data frame is ACKed by node N1.
 
 <img src="birds_eye_view.jpg"/>
 
-## Detail view of Node 1 DATA frame and RTR frame transmissions, ACK by Node 2
+## Detail view of Node 1 DATA frame and RTR frame transmissions, ACKs by Node 2
 
 <img src="node1_ledmsg_dataframe_and_remote_frame.jpg"/>
 
