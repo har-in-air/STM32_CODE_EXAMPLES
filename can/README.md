@@ -9,7 +9,7 @@
 
 ## Acceptance filtering
 
-* Use the spreadsheet stm32_can_filter_config.ods to generate the bit fields for acceptance filtering.
+* Use the spreadsheet `stm32_can_filter_config.ods` (credit : Mitch Minton) to generate the bit fields for acceptance filtering.
 
 
 ## CAN Interrupts

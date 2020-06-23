@@ -298,20 +298,20 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 		}
 	if (rxhdr.StdId == 0x65D && rxhdr.RTR == CAN_RTR_DATA){
 		// N2 : received data frame to control the LEDs
-		printMsg("N2: received LED control msg 0x65D [%x]\r\n", rxmsg[0]);
 		LedControl(rxmsg[0]);
+		printMsg("N2: received 0x65D DATA frame LED[%x]\r\n", rxmsg[0]);
 		}
 	else
 	if (rxhdr.StdId == 0x651 && rxhdr.RTR == CAN_RTR_REMOTE){
 		// N2 : received remote request 0x651
-		printMsg("N2: received RTR 0x651\r\n");
 		SendRemoteResponse(rxhdr.StdId);
+		printMsg("N2: received RTR frame 0x651\r\n");
 		return;
 		}
 	else
 	if (rxhdr.StdId == 0x651 && rxhdr.RTR == CAN_RTR_DATA){
 		// N1 : received reply to remote request 0x651
-		printMsg("N1: reply received to RTR 0x651 [%04X]\r\n", (((uint16_t)rxmsg[0])<<8) | (uint16_t)rxmsg[1]);
+		printMsg("N1: dataframe response received for 0x651 RTR [%04X]\r\n", (((uint16_t)rxmsg[0])<<8) | (uint16_t)rxmsg[1]);
 		}
 	}
 
