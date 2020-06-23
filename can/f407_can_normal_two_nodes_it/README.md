@@ -40,6 +40,6 @@ N1 RTR frame.
 
 ## Detail view of Node 2 response DATA frame, ACK by Node 1
 
-<img src="node2_remote_response.jpg"/>
+<img src="node2_remote_response .jpg"/>
 
 
