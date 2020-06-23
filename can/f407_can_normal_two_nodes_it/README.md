@@ -25,7 +25,11 @@ ID 0x65D and a single byte data payload encoding the LED number. This is followe
 
 After ~6.5milliseconds, Node 2 sends the response DATA frame for msg id 0x651 with
 the two byte data payload (an incrementing counter for each response data frame). The response
-data frame is ACKed by node N1.
+data frame is ACKed by node N1. 
+
+NOTE : The delay in response is because I had a debug uart print message before sending the response
+frame. I have fixed the code now, so you should see the N2 response data frame immediately after the
+N1 RTR frame.
 
 <img src="birds_eye_view.jpg"/>
 
