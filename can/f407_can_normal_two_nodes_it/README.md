@@ -31,7 +31,7 @@ NOTE : The delay in response is because I had a debug uart print message before 
 frame. I have fixed the code now, so you should see the N2 response data frame immediately after the
 N1 RTR frame.
 
-<img src="birds_eye_view.jpg"/>
+<img src="birds_eye_view .jpg"/>
 
 ## Detail view of Node 1 DATA frame and RTR frame transmissions, ACKs by Node 2
 
