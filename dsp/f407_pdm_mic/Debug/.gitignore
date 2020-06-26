@@ -1,0 +1,7 @@
+/Core/
+/Drivers/
+/PDM2PCM/
+/makefile
+/objects.list
+/objects.mk
+/sources.mk
