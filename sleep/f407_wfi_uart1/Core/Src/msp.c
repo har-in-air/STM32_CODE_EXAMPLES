@@ -49,32 +49,3 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart){
 	}
 
 
-
-void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc) {
-	// apb clock enable macros don't apply
-	// clock source is directly LSE, HSE or LSI
-	// Turn on LSE
-	RCC_OscInitTypeDef oscConfig;
-	oscConfig.OscillatorType = RCC_OSCILLATORTYPE_LSE;
-	oscConfig.LSEState = RCC_LSE_ON;
-	oscConfig.PLL.PLLState = RCC_PLL_NONE;
-	if (HAL_OK != HAL_RCC_OscConfig(&oscConfig)){
-		Error_Handler();
-		}
-	// select LSE as RTC clock
-	RCC_PeriphCLKInitTypeDef clkInit;
-	// only two fields are relevant for our application
-	clkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-	clkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-	if (HAL_OK != HAL_RCCEx_PeriphCLKConfig(&clkInit)) {
-		Error_Handler();
-		}
-	// Enable the RTC clock
-	__HAL_RCC_RTC_ENABLE();
-	// calendar starts ticking now
-
-	// Enable the RTC Alarm IRQ in NVIC
-	HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 15, 0);
-	HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
-	}
-
