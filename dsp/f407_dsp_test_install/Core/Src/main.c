@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 // DevEBox STM32F407VGT6 dev board
 // Testing CMSIS DSP package installation and RNG hardware random number generation
-// Use fir example code from my CMSIS DSP install repository
+// Using fir example code from my CMSIS DSP install repository
 // ~/STM32Cube/Repository/Packs/ARM/CMSIS/5.6.0/CMSIS/DSP/Examples/ARM/arm_fir_example
 /* USER CODE END Header */
 

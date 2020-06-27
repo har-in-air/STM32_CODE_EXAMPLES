@@ -134,7 +134,7 @@ int main(void)
   // number of bytes in DataSPI will cross the page boundary
   uint32_t writeAddressSPI = 250;
 
-  // write source buffer WriteDataDMA  with DMA SPI transfer
+  // write source buffer DataSPIDMA  with DMA SPI transfer
   // write address 895 translates to page 3, offset 127
   // Note : write stays within the page boundary
   uint32_t writeAddressDMA = 895;
