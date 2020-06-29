@@ -6,6 +6,9 @@ Fs = 32kHz
 * 128 point sample buffer
 * Hanning window applied to input buffer before FFT
 
+## Credits
+[Monkey Listen project](https://github.com/ehughes/MonkeyListen)
+
 ## Fixed point versus floating point FFT
 
 Tried ARM CMSIS fixed point Q15 and floating point F32 fft.
