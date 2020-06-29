@@ -6,13 +6,13 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#define ARM_MATH_CM4
 
 #include "main.h"
-#include "arm_math.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#define ARM_MATH_CM4
+#include "arm_math.h"
 
 /* USER CODE END Includes */
 
