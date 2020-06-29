@@ -63,13 +63,12 @@ enum RxDmaState RxState = RXBUF_WAIT;
 
 // ping-pong buffers, one receives data from input stream while other is
 // processed for FFT.
-// the incoming data needs to be copied into these as the FFT call does
+// Note : the incoming data needs to be copied as the FFT call does
 // in-place processing on the input buffer (i.e. destroys the contents).
 q15_t 	Buf[2][BUFFER_SIZE];
 q15_t* 	pBufRcv;
 q15_t* 	pBufProc;
 int 	RcvInx;
-int 	ProcInx;
 
 // test fixed point arithmetic versus floating point fft
 //#define DO_FFT_Q15
@@ -153,10 +152,10 @@ int main(void)
   MX_I2S2_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+
 	RcvInx = 0;
-	ProcInx = 1;
 	pBufRcv = Buf[RcvInx];
-	pBufProc = Buf[ProcInx];
+	pBufProc = Buf[1-RcvInx];
 
 #ifdef DO_FFT_Q15
     // length of real data array = 128, inverseFlag = 0, doBitReverse = 1
@@ -402,9 +401,8 @@ void processData(void){
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
 	// swap the incoming and processing data buffers
 	RcvInx ^= 1;
-	ProcInx ^= 1;
 	pBufRcv = Buf[RcvInx];
-	pBufProc = Buf[ProcInx];
+	pBufProc = Buf[1-RcvInx];
 	for(int inx = 0; inx < BUFFER_SIZE; inx++){
 		pBufProc[inx] = ((q31_t)pBufProc[inx] * Hanning[inx])>>15;
 #ifdef DO_FFT_F32
