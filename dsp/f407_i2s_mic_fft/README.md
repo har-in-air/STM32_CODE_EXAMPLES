@@ -29,7 +29,7 @@ fixed point for 128point FFTs (Q15 fft = 128uS, F32 fft = 120uS).
 
 * Android signal generator app used to generate 600Hz sine wave, 4650Hz sine wave and 
 800Hz square wave tones on a phone placed next to microphone.
-* Onboard PA1 button press used to trigger dump of FFT magnitude array to serial terminal.
+* Onboard PA0 button press used to trigger dump of FFT magnitude array to serial terminal.
 * Serial terminal data log opened in spreadsheet for plotting
 * 128 point FFT, spectral resolution is 32kHz/128 = 250Hz = array spacing.
      
