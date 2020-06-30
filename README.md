@@ -11,7 +11,7 @@ header files. I've commented these projects in more detail. Others use CubeMX ge
 ## Credits
 
 * [Udemy code repository](https://github.com/niekiran) Note these were implemented for a Nucleo STM32F446 board.
-* [W25Qxx spi flash library](https://github.com/nimaltd/w25qxx) I added DMA write and read transfers while still allowing normal SPI transactions. For example, for a DMA write, normal SPI transactions are used to check flash busy, enable write, and program the page address. DMA is used for the data buffer write.
+* Project specific credits are in the associated README files.
 
 
 ## Development Environment
