@@ -17,8 +17,8 @@ Implemented both ARM CMSIS fixed point Q15 and floating point F32 ffts.
 On-board pin PA4 pulsed high for the FFT execution duration, pin PA5 toggled every time
 we read 128 data samples from the I2S DMA receive buffer. Execution time was logged on a logic analyzer.
 
-Q15 fft = 128uS
-F32 fft = 120uS
+* Q15 fft = 128uS
+* F32 fft = 120uS
 
 On the STM32F407, it looks like there is no advantage to using fixed point for 128point FFTs. 
 
