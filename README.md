@@ -6,7 +6,9 @@ taking Udemy online embedded software courses related to Cortex M microcontrolle
 So I thought this would make a good repository of STM32CubeIDE code examples demonstrating Cortex M peripherals and feature usage.
 
 Some of the code exercises required us to understand the HAL apis so we used CubeMX only to pull in the required peripheral libraries and header files. Or programming from scratch using only CubeMX generated startup code and linker files, plus manually added CMSIS and microcontroller
-header files. I've commented these projects in more detail. Others use CubeMX generated initialization code. 
+header files. I've commented these projects in more detail. Others use CubeMX generated initialization functions.
+
+I've also added non-course related code related to DMA, DSP etc.
 
 ## Credits
 
