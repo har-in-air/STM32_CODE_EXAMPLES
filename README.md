@@ -16,15 +16,19 @@ header files. I've commented these projects in more detail. Others use CubeMX ge
 
 ## Development Environment
 
+### Software
 * Ubuntu 20.04 AMDx64
 * STM32CubeIDE v1.2.0
 * FreeRTOS 10.3.1
 * SystemView 3.12
-* JLink jtag/swd debugger
+### Hardware
+* JLink JTAG/SWD debugger
 * STLink v2 clone with [mod for SWO trace](http://eeblog.co.uk/2018/11/29/swo-with-cubemx-using-st-link-clones/)
-* WeAct v1.3 STM32F411CEU6 dev board (FreeRTOS, semi-hosting, SWO demos)
-* DevEBox STM32F407VGT6 dev board (everything else)
 * PL2303 HXD USB-UART adapter - [max data rate 12Mbps](https://www.sjoerdlangkemper.nl/2019/03/20/usb-to-serial-uart/)
+* WeAct v1.3 STM32F411CEU6 dev board (FreeRTOS projects and Semi-hosting/SWO demo)
+<img src = "WeAct_STM32F411CEU6_pinout.jpg"/>
+* DevEBox STM32F407VGT6 dev board (All other projects)
+<img src = "DevEBox_STM32F407VGT6_pinout.jpg"/>
 
 ## Project Notes
 
