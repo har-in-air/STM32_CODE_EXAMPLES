@@ -118,9 +118,9 @@ SEGGER
 ```
     DWT->CTRL |= (1<<0);  
 ```    
-* Add SystemView config and start statements in main.c before any FreeRTOS api calls. To avoid configAssert error in SEGGER_SYSVIEW_Start() caused by 
- un-initialized variable ulMaxPRIGROUP, we need to edit port.c to 
- add an initialization function vSetVarulMaxPRIGROUPValue() and call it before SEGGER_SYSVIEW_Start().
+* Add SystemView config and start statements in main.c before any FreeRTOS api calls. To avoid `configAssert` error in `SEGGER_SYSVIEW_Start()` caused by 
+ un-initialized variable `ulMaxPRIGROUP`, we need to edit port.c to 
+ add an initialization function `vSetVarulMaxPRIGROUPValue()` and call it before `SEGGER_SYSVIEW_Start()`.
  [Source](https://forum.segger.com/index.php/Thread/6046-SOLVED-Systemview-stuck-in-configASSERT-with-FreeRTOS-STM32CubeMX/)
 ```  
     SEGGER_SYSVIEW_Conf();
@@ -179,8 +179,8 @@ void vSetVarulMaxPRIGROUPValue( void )
 * To trace software timer callbacks, add this to `SEGGER/OS/SEGGER_SYSVIEW_FreeRTOS.h` and add the
 directory `SEGGER/OS` to the C/C++ build settings include paths. See the freertos_idlehook project example.
 ```
-#define traceTIMER_ENTER(pxTimer)					SEGGER_SYSVIEW_RecordEnterTimer((U32)pxTimer)
-#define traceTIMER_EXIT()							SEGGER_SYSVIEW_RecordExitTimer()
+#define traceTIMER_ENTER(pxTimer)	SEGGER_SYSVIEW_RecordEnterTimer((U32)pxTimer)
+#define traceTIMER_EXIT()		SEGGER_SYSVIEW_RecordExitTimer()
  ```
  
 
