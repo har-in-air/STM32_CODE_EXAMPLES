@@ -1,21 +1,11 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+// DevEBox STM32F407VGT6 dev board
+// Demonstrates reception of PDM data from an ST MP45DT02 PDM microphone on I2S2 port
+// I2S2 is configured as timing slave to I2S3 ( BCK and WS taken from I2S3 )
+// Incoming DMA stream PDM data is converted to PCM using the
+// PDM2PCM library. The PCM data is transmitted using DMA to I2S3 to a MAX98357A I2S
+// power amplifier and speaker. A FIFO is used between the filter PCM output and
+// the transmit as I2S2 and I2S3 are enabled at different times.
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -66,11 +56,22 @@ static void MX_I2S3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint16_t txBuf[128];
-uint16_t pdmRxBuf[128];
-uint16_t MidBuffer[16];
-uint8_t txstate = 0;
+#define OUT_FS_KHZ  		48
+#define DECIMATION_FACTOR	64
+
+#define PDM2PCM_OUT_SAMPLES 		OUT_FS_KHZ
+#define PDM2PCM_IN_SAMPLES_BYTES	(OUT_FS_KHZ*DECIMATION_FACTOR/8)
+#define PDM2PCM_IN_SAMPLES_HWORDS   (PDM2PCM_IN_SAMPLES_BYTES/2)
+
+
+uint16_t pdmRxBuf[PDM2PCM_IN_SAMPLES_HWORDS * 2];
 uint8_t rxstate = 0;
+
+// PDM2PCM library generates PDM2PCM_OUT_SAMPLES for each call
+uint16_t MidBuffer[PDM2PCM_OUT_SAMPLES];
+
+uint16_t txBuf[128] = {0};
+uint8_t txstate = 0;
 
 
 uint16_t fifobuf[256];
@@ -125,8 +126,15 @@ int main(void)
   MX_I2S3_Init();
   MX_PDM2PCM_Init();
   /* USER CODE BEGIN 2 */
+
+  // The I2S peripherals internally transfer data in 16bit chunks, so the rx and tx buffers need
+  // to be half-word buffers.
   HAL_I2S_Transmit_DMA(&hi2s3, &txBuf[0], 64);
-   HAL_I2S_Receive_DMA(&hi2s2, &pdmRxBuf[0],64);
+  // we've configured I2S2 for 24bit data in 32bit frame, HAL API requires us to request the
+  // number of words, and transfers twice that number of half-words
+  // pdmRxBuf length is PDM2PCM_IN_SAMPLES_HWORDS*2, so request PDM2PCM_IN_SAMPLES_HWORDS
+  HAL_I2S_Receive_DMA(&hi2s2, &pdmRxBuf[0], PDM2PCM_IN_SAMPLES_HWORDS);
+
   /* USER CODE END 2 */
  
  
@@ -138,44 +146,47 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	    if (rxstate==1) {
-	    	PDM_Filter(&pdmRxBuf[0],&MidBuffer[0], &PDM1_filter_handler);
-	    	for (int i=0; i<16;i++) { FifoWrite(MidBuffer[i]); }
-	    	if (fifo_w_ptr-fifo_r_ptr > 128) fifo_read_enabled=1;
-	    	rxstate=0;
+	    if (rxstate == 1) {
+	    	PDM_Filter(&pdmRxBuf[0], &MidBuffer[0], &PDM1_filter_handler);
+	    	for (int i = 0; i < PDM2PCM_OUT_SAMPLES; i++) {
+	    		FifoWrite(MidBuffer[i]);
+	    		}
+	    	if (fifo_w_ptr-fifo_r_ptr > 128) {
+	    		fifo_read_enabled = 1;
+	    		}
+	    	rxstate = 0;
+	    	}
 
-	    }
-
-	    if (rxstate==2) {
-	    	PDM_Filter(&pdmRxBuf[64],&MidBuffer[0], &PDM1_filter_handler);
-	    	for (int i=0; i<16;i++) { FifoWrite(MidBuffer[i]); }
-	    	rxstate=0;
-
-	    }
+	    if (rxstate == 2) {
+	    	PDM_Filter(&pdmRxBuf[PDM2PCM_IN_SAMPLES_HWORDS], &MidBuffer[0], &PDM1_filter_handler);
+	    	for (int i = 0; i < PDM2PCM_OUT_SAMPLES; i++) {
+	    		FifoWrite(MidBuffer[i]);
+	    		}
+	    	rxstate = 0;
+	    	}
 
 	    if (txstate==1) {
-	    	if (fifo_read_enabled==1) {
-				for (int i=0; i<64;i=i+4) {
+	    	if (fifo_read_enabled == 1) {
+				for (int i = 0; i < 64; i = i+4) {
 					uint16_t data = FifoRead();
 					txBuf[i] = data;
-					txBuf[i+2] = data;
-				}
+					txBuf[i+2] = 0;
+					}
+	    		}
+	    	txstate = 0;
 	    	}
-	    	txstate=0;
-	    }
 
-	    if (txstate==2) {
-	    	if (fifo_read_enabled==1) {
-				for (int i=64; i<128;i=i+4) {
+	    if (txstate == 2) {
+	    	if (fifo_read_enabled == 1) {
+				for (int i = 64; i < 128; i = i+4) {
 					uint16_t data = FifoRead();
-					txBuf[i] = data;
-					txBuf[i+2] = data;
+					txBuf[i] = data; // L channel  (supposed to be 24 bits in 32bit frame, lower 8bits set to 0)
+					txBuf[i+2] = 0; //  R channel
+				 	 }
 				}
-
-			}
-	    	txstate=0;
-	    }
-  }
+	    	txstate = 0;
+	    	}
+  	  }
   /* USER CODE END 3 */
 }
 
@@ -273,7 +284,7 @@ static void MX_I2S2_Init(void)
   /* USER CODE END I2S2_Init 1 */
   hi2s2.Instance = SPI2;
   hi2s2.Init.Mode = I2S_MODE_SLAVE_RX;
-  hi2s2.Init.Standard = I2S_STANDARD_MSB;
+  hi2s2.Init.Standard = I2S_STANDARD_PHILIPS;
   hi2s2.Init.DataFormat = I2S_DATAFORMAT_24B;
   hi2s2.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
   hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_48K;
