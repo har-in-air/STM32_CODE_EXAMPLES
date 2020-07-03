@@ -167,16 +167,21 @@ int main(void)
 
   // The I2S peripherals internally transfer data in 16bit chunks, so the rx and tx buffers need
   // to be half-word buffers.
-  // we've configured I2S2 for 24bit data in 32bit frame, HAL API requires us to request the
-  // number of words, it multiplies that by 2 to transfer the required number of half-words
-
+  // we've configured I2S2 for Fs=32kHZ, 24bit data in 32bit frame. This is only to ensure
+  // that BCK = 64 * 32kHz = 2.048MHz, the PDM microphones just generate a 1-bit stream of data.
+  // For 24/32 format, HAL API requires us to request the number of words, it multiplies that 
+  // by 2 to transfer the required number of half-words
   HAL_I2S_Receive_DMA(&hi2s2, PDMRxBuf, RXBUF_NSAMPLES/2);
+  
+  // Generate BCK/2 using TIM1 divider. Maybe TIM2 is better choice as it is on the same
+  // APB1 bus as I2S2 while TIM1 is on APB2. But TIM1 internals are  clocked at 84MHz versus
+  // TIM2 @ 42MHz. Which is more important ?
   if (HAL_OK != HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1)) {
       Error_Handler();
       }
 
-  // we've configured I2S2 for 16bit data in 16bit frame, HAL API requires us to request the
-  // number of half-words
+  // we've configured I2S3 for Fs=32kHz, 16bit data in 16bit frame, i.e. BCK = 1.024MHz 
+  // For 16/16 format, HAL API requires us to request the number of half-words
   HAL_I2S_Transmit_DMA(&hi2s3, I2STxBuf, TXBUF_NSAMPLES);
 
 
@@ -199,7 +204,7 @@ int main(void)
 	    		FifoWrite(PCMBufL[i]);
 	    		FifoWrite(PCMBufR[i]);
 	    		}
-	    	// enough of a buffer to start output streaming
+	    	// enough data buffered to start streaming output on I2S3
 	    	if ((FIFOwPtr - FIFOrPtr) > 128) {
 	    		FIFOReadEnabled = 1;
 	    		}
@@ -220,8 +225,8 @@ int main(void)
 	    if (TxState == DMA_HALF_COMPLETE) {
 	    	if (FIFOReadEnabled == 1) {
 				for (int i = 0; i < PDM2PCM_OUT_NSAMPLES; i++) {
-					I2STxBuf[2*i] = FifoRead();
-					I2STxBuf[2*i + 1] = FifoRead();
+					I2STxBuf[2*i] = FifoRead(); // L
+					I2STxBuf[2*i + 1] = FifoRead(); // R
 					}
 	    		}
 	    	TxState = DMA_IN_PROGRESS;
@@ -231,8 +236,8 @@ int main(void)
 	    	if (FIFOReadEnabled == 1) {
 	    		uint16_t* pBuf = &I2STxBuf[TXBUF_NSAMPLES/2];
 				for (int i = 0; i < PDM2PCM_OUT_NSAMPLES; i++) {
-					pBuf[2*i] = FifoRead();
-					pBuf[2*i + 1] = FifoRead();
+					pBuf[2*i] = FifoRead(); // L
+					pBuf[2*i + 1] = FifoRead(); // R
 				 	}
 				}
 	    	TxState = DMA_IN_PROGRESS;
