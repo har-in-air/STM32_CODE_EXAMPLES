@@ -1,13 +1,26 @@
 /* USER CODE BEGIN Header */
 // DevEBox STM32F407VGT6 dev board
-// Demonstrates reception of PDM data from an ST MP45DT02 PDM microphone on I2S2 port
-// I2S2 is configured as half-duplex master receive 24bit in 32bit frame @ 32kHz
-// thus generating a PDM clock = BCK = 64*32khz = 2.048Mhz
-// I2S3 configured as half-duplex master transmit 16bit in 16bit frame, Fs = 32khz.
-// So PDM clock frequency = BCK = 32*32 = 1.024
+// Demonstrates reception of PDM data from two  MP45DT02 PDM microphones on I2S2 port
+// The two microphones are wired for L and R channels, i.e. generate data on rising
+// and falling edges of the clock and tristated otherwise. So their data lines can be
+// connected together.
+// I2S2 master receive PDM configured for Fs = 32khz, 24bit data in 32bit Frame
+// => BCK = 32kHz*64bits = 2.048MHz
+// BCK is routed to TIM1_ETR (PE7) and divided by 2 to generate BCK/2 = 1.024MHz
+// at TIM1_CH1 (PE9).
+// This is the clock for the two PDM microphones. So I2S2 samples at BCK, but the two
+// PDM microphones generate 1bit data valid on their BCK/2 rising edge and falling edge
+// respectively.
+// The result is a stream of interleaved L and R 1-bit data streams on I2S2 data input line.
+
+// Note : 1MHz is the minimum clock for the MP45DT02 PDM microphone.
+
+// I2S3 master transmit I2S configured for Fs = 32khz, 16bit data in 16bit Frame
+// => BCK = 32kHz*32bits = 1.024MHz
+
 // Incoming DMA stream PDM data is converted to PCM using the
-// PDM2PCM library. The PCM data is transmitted using DMA to I2S3 to a MAX98357A I2S
-// power amplifier and speaker. A FIFO is used between the filter PCM output and
+// PDM2PCM library after de-interleaving the L and R PDM channels and separately
+// decimating and filtering them. A FIFO is used between the filter PCM output and
 // the transmit as I2S2 and I2S3 are not synced.
 /* USER CODE END Header */
 
@@ -68,14 +81,6 @@ static void MX_TIM1_Init(void);
 
 void PDM_DeInterleave(uint16_t* pPDMBuf, int nSamples, uint8_t* pPDMBufL, uint8_t* pPDMBufR);
 
-// I2S3 master transmit I2S configured for Fs = 32khz, 16bit data in 16bit Frame => BCK = 32kHz*32bits = 1.024MHz
-// I2S2 master receive PDM configured for Fs = 32khz, 24bit data in 32bit Frame => BCK = 32kHz*64bits = 2.048MHz
-// BCK is routed to TIM1_ETR (PE7) and divided by 2 to generate BCK/2 = 1.024MHz at TIM1_CH1 (PE9)
-// This is fed to stereo PDM microphones. So I2S2 samples at BCK, but the two PDM microphones generate 1bit data
-// valid on their BCK/2 rising edge and falling edge respectively ( L and R configured).
-// The result is a stream of interleaved L and R 1-bit data streams on I2S2 data input line.
-
-// Note : 1MHz is the minimum clock for the MP45DT02 PDM microphone.
 #define OUT_FS_KHZ  				32
 #define DECIMATION_FACTOR			32
 
