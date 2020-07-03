@@ -1,7 +1,10 @@
 /* USER CODE BEGIN Header */
 // DevEBox STM32F407VGT6 dev board
-// Demonstrates reception of PDM data from an ST MP45DT02 PDM microphone on I2S2 port
+// Demonstrates reception of PDM data from a MP45DT02 PDM microphone via I2S2,
+// conversion to PCM data and transmission over I2S3 to an I2S class D amplifier and speaker
 // I2S2 is configured as timing slave to I2S3 ( BCK and WS taken from I2S3 )
+// I2S3 configured as master transmit 24bit in 32bit frame, Fs = 48khz.
+// PDM clock frequency = BCK = 64*16 = 3.072MHz
 // Incoming DMA stream PDM data is converted to PCM using the
 // PDM2PCM library. The PCM data is transmitted using DMA to I2S3 to a MAX98357A I2S
 // power amplifier and speaker. A FIFO is used between the filter PCM output and
@@ -56,6 +59,7 @@ static void MX_I2S3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 #define OUT_FS_KHZ  		48
 #define DECIMATION_FACTOR	64
 
@@ -63,32 +67,38 @@ static void MX_I2S3_Init(void);
 #define PDM2PCM_IN_SAMPLES_BYTES	(OUT_FS_KHZ*DECIMATION_FACTOR/8)
 #define PDM2PCM_IN_SAMPLES_HWORDS   (PDM2PCM_IN_SAMPLES_BYTES/2)
 
+#define RXBUF_NSAMPLES (PDM2PCM_IN_SAMPLES_HWORDS * 2)
+#define TXBUF_NSAMPLES (PDM2PCM_OUT_SAMPLES*4*2)
 
-uint16_t pdmRxBuf[PDM2PCM_IN_SAMPLES_HWORDS * 2];
-uint8_t rxstate = 0;
-
+uint16_t PDMRxBuf[RXBUF_NSAMPLES] = {0};
 // PDM2PCM library generates PDM2PCM_OUT_SAMPLES for each call
-uint16_t MidBuffer[PDM2PCM_OUT_SAMPLES];
+uint16_t PCMBuf[PDM2PCM_OUT_SAMPLES];
+uint16_t I2STxBuf[TXBUF_NSAMPLES] = {0};
 
-uint16_t txBuf[128] = {0};
-uint8_t txstate = 0;
+// dma completion state
+enum DmaState {DMA_IN_PROGRESS, DMA_HALF_COMPLETE, DMA_COMPLETE};
+enum DmaState RxState = DMA_IN_PROGRESS;
+enum DmaState TxState = DMA_IN_PROGRESS;
 
+// 256 entry FIFO and uint8_t  pointers to allow automatic rollover to 0
+uint16_t FIFOBuf[256];
+uint8_t FIFOwPtr = 0;
+uint8_t FIFOrPtr = 0;
 
-uint16_t fifobuf[256];
-uint8_t fifo_w_ptr = 0;
-uint8_t fifo_r_ptr = 0;
-uint8_t fifo_read_enabled = 0;
+// flag to start reading out from the FIFO when enough data is buffered
+int FIFOReadEnabled = 0;
 
 void FifoWrite(uint16_t data) {
-	fifobuf[fifo_w_ptr] = data;
-	fifo_w_ptr++;
-}
+	FIFOBuf[FIFOwPtr] = data;
+	FIFOwPtr++;
+	}
 
 uint16_t FifoRead() {
-	uint16_t val = fifobuf[fifo_r_ptr];
-	fifo_r_ptr++;
+	uint16_t val = FIFOBuf[FIFOrPtr];
+	FIFOrPtr++;
 	return val;
-}
+	}
+
 /* USER CODE END 0 */
 
 /**
@@ -129,11 +139,12 @@ int main(void)
 
   // The I2S peripherals internally transfer data in 16bit chunks, so the rx and tx buffers need
   // to be half-word buffers.
-  HAL_I2S_Transmit_DMA(&hi2s3, &txBuf[0], 64);
   // we've configured I2S2 for 24bit data in 32bit frame, HAL API requires us to request the
   // number of words, and transfers twice that number of half-words
-  // pdmRxBuf length is PDM2PCM_IN_SAMPLES_HWORDS*2, so request PDM2PCM_IN_SAMPLES_HWORDS
-  HAL_I2S_Receive_DMA(&hi2s2, &pdmRxBuf[0], PDM2PCM_IN_SAMPLES_HWORDS);
+  HAL_I2S_Transmit_DMA(&hi2s3, I2STxBuf, TXBUF_NSAMPLES/2);
+
+  // I2S2 is a timing slave (BCK and WS from IS3) so needs to start up after I2S3
+  HAL_I2S_Receive_DMA(&hi2s2, PDMRxBuf, RXBUF_NSAMPLES/2);
 
   /* USER CODE END 2 */
  
@@ -146,47 +157,50 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	    if (rxstate == 1) {
-	    	PDM_Filter(&pdmRxBuf[0], &MidBuffer[0], &PDM1_filter_handler);
+	    if (RxState == DMA_HALF_COMPLETE) {
+	    	PDM_Filter(PDMRxBuf, PCMBuf, &PDM1_filter_handler);
 	    	for (int i = 0; i < PDM2PCM_OUT_SAMPLES; i++) {
-	    		FifoWrite(MidBuffer[i]);
+	    		FifoWrite(PCMBuf[i]);
 	    		}
-	    	if (fifo_w_ptr-fifo_r_ptr > 128) {
-	    		fifo_read_enabled = 1;
+	    	// enough of a buffer to start output streaming
+	    	if ((FIFOwPtr - FIFOrPtr) > 128) {
+	    		FIFOReadEnabled = 1;
 	    		}
-	    	rxstate = 0;
+	    	RxState = DMA_IN_PROGRESS;
 	    	}
 
-	    if (rxstate == 2) {
-	    	PDM_Filter(&pdmRxBuf[PDM2PCM_IN_SAMPLES_HWORDS], &MidBuffer[0], &PDM1_filter_handler);
+	    if (RxState == DMA_COMPLETE) {
+	    	PDM_Filter(&PDMRxBuf[RXBUF_NSAMPLES/2], PCMBuf, &PDM1_filter_handler);
 	    	for (int i = 0; i < PDM2PCM_OUT_SAMPLES; i++) {
-	    		FifoWrite(MidBuffer[i]);
+	    		FifoWrite(PCMBuf[i]);
 	    		}
-	    	rxstate = 0;
+	    	RxState = DMA_IN_PROGRESS;
 	    	}
 
-	    if (txstate==1) {
-	    	if (fifo_read_enabled == 1) {
-				for (int i = 0; i < 64; i = i+4) {
+	    if (TxState == DMA_HALF_COMPLETE) {
+	    	if (FIFOReadEnabled == 1) {
+				for (int i = 0; i < PDM2PCM_OUT_SAMPLES; i++) {
 					uint16_t data = FifoRead();
-					txBuf[i] = data;
-					txBuf[i+2] = 0;
+					I2STxBuf[4*i] = data; // L channel  (24 bits in 32bit frame, lower 8bits set to 0)
+					I2STxBuf[4*i + 2] = data; //  set R channel to L channel
 					}
 	    		}
-	    	txstate = 0;
+	    	TxState = DMA_IN_PROGRESS;
 	    	}
 
-	    if (txstate == 2) {
-	    	if (fifo_read_enabled == 1) {
-				for (int i = 64; i < 128; i = i+4) {
+	    if (TxState == DMA_COMPLETE) {
+	    	if (FIFOReadEnabled == 1) {
+	    		uint16_t* pBuf = &I2STxBuf[TXBUF_NSAMPLES/2];
+				for (int i = 0; i < PDM2PCM_OUT_SAMPLES; i++) {
 					uint16_t data = FifoRead();
-					txBuf[i] = data; // L channel  (supposed to be 24 bits in 32bit frame, lower 8bits set to 0)
-					txBuf[i+2] = 0; //  R channel
-				 	 }
+					pBuf[4*i] = data; // L channel  (24 bits in 32bit frame, lower 8bits set to 0)
+					pBuf[4*i + 2] = data; //  set R channel to L channel
+				 	}
 				}
-	    	txstate = 0;
+	    	TxState = DMA_IN_PROGRESS;
 	    	}
   	  }
+
   /* USER CODE END 3 */
 }
 
@@ -389,19 +403,19 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_I2S_TxHalfCpltCallback (I2S_HandleTypeDef *hi2s) {
-	txstate = 1;
+	TxState = DMA_HALF_COMPLETE;
 }
 
 void HAL_I2S_TxCpltCallback (I2S_HandleTypeDef *hi2s) {
-	txstate = 2;
+	TxState = DMA_COMPLETE;
 }
 
 void HAL_I2S_RxHalfCpltCallback (I2S_HandleTypeDef *hi2s) {
-	rxstate = 1;
+	RxState = DMA_HALF_COMPLETE;
 }
 
 void HAL_I2S_RxCpltCallback (I2S_HandleTypeDef *hi2s) {
-	rxstate = 2;
+	RxState = DMA_COMPLETE;
 }
 
 /* USER CODE END 4 */
