@@ -4,7 +4,7 @@
 // conversion to PCM data and transmission over I2S3 to an I2S class D amplifier and speaker
 // I2S2 is configured as timing slave to I2S3 ( BCK and WS taken from I2S3 )
 // I2S3 configured as master transmit 24bit in 32bit frame, Fs = 48khz.
-// PDM clock frequency = BCK = 64*16 = 3.072MHz
+// PDM clock frequency = BCK = 64*48 = 3.072MHz
 // Incoming DMA stream PDM data is converted to PCM using the
 // PDM2PCM library. The PCM data is transmitted using DMA to I2S3 to a MAX98357A I2S
 // power amplifier and speaker. A FIFO is used between the filter PCM output and
