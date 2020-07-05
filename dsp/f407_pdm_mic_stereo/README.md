@@ -10,7 +10,7 @@ I2S2 receives the LR bit interleaved stream. Separate PDM2PCM filters are used t
 32 to L and R 32kHZ 16bit PCM streams which are then recombined and transmitted by I2S3 in
 16-in-16frame data format to an I2S class D amplifier configured for (L+R)/2 mode.
 
-###Credits
+### Credits
 
 General data flow (mono PDM) and syncing FIFO concept from [this **YetAnotherElectronicsChannel** project](https://github.com/YetAnotherElectronicsChannel/STM32_PDM_Microphone). You should watch [his
 Youtube video](https://www.youtube.com/watch?v=JuXKeyFraF4) for an explanation of PDM to PCM filtering.
