@@ -75,6 +75,7 @@ static void MX_USART2_UART_Init(void);
 // work with trivial mods on the cheaper STM32F401CCU6 Black Pill board.
 // credits : https://github.com/dimtass/stm32f407_dds_dac,
 //           https://www.youtube.com/watch?v=YDC5zaEZGhM
+//           https://github.com/YetAnotherElectronicsChannel/STM32_PDM_Microphone
 ///////////////////////////////////////////////////////////////////////////////
 
 
