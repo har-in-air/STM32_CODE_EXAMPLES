@@ -68,23 +68,25 @@ static void MX_USART2_UART_Init(void);
 //
 // Direct Digital Synthesis of I2S (24bit @ 48KHz) waveform
 // (in this example, a sine wave).
-// Inputs are desired frequency SINE_WAVE_FREQ_HZ, amplitude VOLUME
-// and sampling frequency Fs
+// User configurable inputs are :
+// Desired frequency = SINE_WAVE_FREQ_HZ
+// Amplitude = VOLUME
 // Implemented on WeAct STM32F411CEU6 Black Pill dev board. Will also
 // work with trivial mods on the cheaper STM32F401CCU6 Black Pill board.
-
 // credits : https://github.com/dimtass/stm32f407_dds_dac,
 //           https://www.youtube.com/watch?v=YDC5zaEZGhM
+///////////////////////////////////////////////////////////////////////////////
 
 
 #define SINE_WAVE_FREQ_HZ 	1000.0f
 #define VOLUME				0.25f // [0.001 - 0.999]
-#define FS_HZ				48000.0f
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #define _2PI            6.283185307f
 #define _PI             3.14159265f
+
+#define FS_HZ				48000.0f
 
 #define SINE_TABLE_SIZE 	1024
 
