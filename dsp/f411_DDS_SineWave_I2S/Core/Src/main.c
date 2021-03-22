@@ -89,7 +89,7 @@ static void MX_USART2_UART_Init(void);
 
 #define FS_HZ				48000.0f
 
-#define SINE_TABLE_SIZE 	1024
+#define SINE_TABLE_SIZE 	2048
 
 // convert float to 24bit 2's complement
 #define SCALE_24BITS(fval)  	( (fval) * (((int32_t)1) << 23) )
@@ -106,8 +106,9 @@ uint32_t PhaseAccumulator = 0;
 uint32_t PhaseIncrement;
 
 #define TXBUF_SIZE 	512
-// TxBuf contains stereo L, R 24bit samples encoded as [16msb,8lsb:0]
-// i.e. each stereo sample requires 4 uint16_ts, so TxBuf[512]
+// TxBuf contains stereo L, R 24bit samples encoded in 32bits as
+// two uint16_ts [16msb,8lsb:0]
+// A stereo sample requires 4 uint16_ts, so TxBuf[512]
 // contains 128 stereo 24bit samples
 uint16_t TxBuf[TXBUF_SIZE];
 
