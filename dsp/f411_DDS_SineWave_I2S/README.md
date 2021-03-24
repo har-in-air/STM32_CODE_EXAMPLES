@@ -16,7 +16,8 @@ generates a 440.5Hz with harmonic at 881Hz.
 * Implemented on WeAct STM32F411CEU6 Black Pill dev board. Will also  work with trivial mods on 
   the cheaper STM32F401CCU6 Black Pill board.
 * In this example it takes 1.333mS to transmit a buffer of 64 stereo samples at 48kHz, while the 
-DDS generation of 64 new samples only takes 0.135mS using integer arithmetic.
+DDS generation of 64 new samples only takes 0.135mS using integer arithmetic on the STM32F411
+clocked at 96MHz.
 
 <img src="dds_buffer_calculation_time.png" />
   
