@@ -66,11 +66,11 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN 0 */
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Direct Digital Synthesis of I2S (24bit @ 48KHz) waveform
-// (in this example, a sine wave).
+// Direct Digital Synthesis of I2S  periodic waveform (24bit resolution @ Fs = 48KHz)
+// In this example, a 440Hz (A note) sine wave  with a harmonic at 880Hz.
 // User configurable inputs are :
-// Desired frequency = SINE_WAVE_FREQ_HZ
-// Amplitude = VOLUME
+// Fundamental frequency = WAVE_FREQ_HZ
+// Fundamental amplitude = VOLUME
 // Implemented on WeAct STM32F411CEU6 Black Pill dev board. Will also
 // work with trivial mods on the cheaper STM32F401CCU6 Black Pill board.
 // credits : https://github.com/dimtass/stm32f407_dds_dac,
@@ -79,7 +79,7 @@ static void MX_USART2_UART_Init(void);
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#define SINE_WAVE_FREQ_HZ 	1000.0f
+#define WAVE_FREQ_HZ 	440.0f
 #define VOLUME				0.25f // [0.001 - 0.999]
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -89,18 +89,18 @@ static void MX_USART2_UART_Init(void);
 
 #define FS_HZ				48000.0f
 
-#define SINE_TABLE_SIZE 	2048
+#define WAVE_TABLE_SIZE 	2048
 
 // convert float to 24bit 2's complement
-#define SCALE_24BITS(fval)  	( (fval) * (((int32_t)1) << 23) )
-
-// 16.16 resolution fixed point values
-#define FLOAT_2_FIXED16(fval)  	( (fval) * (((uint32_t)1) << 16) )
+#define FLOAT_2_24BITS(fval)  	( (fval) * (((int32_t)1) << 23) )
 
 // 24bit 2's complement sine wave table
-int32_t SineTable[SINE_TABLE_SIZE + 1];	// +1 for interpolation
+int32_t WaveTable[WAVE_TABLE_SIZE + 1];	// +1 for interpolation
 
-#define MAX_PHASE_ACCUM (((uint32_t)SINE_TABLE_SIZE) << 16)
+// 16.16 resolution fixed point format for phase increment and accumulator
+#define FLOAT_2_FIXED16(fval)  	( (fval) * (((uint32_t)1) << 16) )
+
+#define MAX_PHASE_ACCUM (((uint32_t)WAVE_TABLE_SIZE) << 16)
 
 uint32_t PhaseAccumulator = 0;
 uint32_t PhaseIncrement;
@@ -115,18 +115,18 @@ uint16_t TxBuf[TXBUF_SIZE];
 enum DmaState {DMA_IN_PROGRESS, DMA_HALF_COMPLETE, DMA_COMPLETE};
 enum DmaState TxState = DMA_IN_PROGRESS;
 
-void sineTable_Init(void);
-void dds_Calculate(uint16_t* buffer, int num_samples);
-
-void i2s_ClockConfig();
-HAL_StatusTypeDef i2s_Config_I2SPR(uint32_t regVal);
-void print_Msg(char* format, ...);
-
 #define TOGGLE_RED_LED() HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
 #define TOGGLE_GRN_LED() HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_6);
 
 #define BLU_LED_ON()  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
 #define BLU_LED_OFF()  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+
+void wave_table_init(void);
+void dds_calculate(uint16_t* buffer, int num_samples);
+void i2s_clock_config();
+HAL_StatusTypeDef i2s_config_PR(uint32_t regVal);
+void print_msg(char* format, ...);
+
 
 
 // dma completion state
@@ -139,39 +139,41 @@ void HAL_I2S_TxCpltCallback (I2S_HandleTypeDef *hi2s) {
 	TxState = DMA_COMPLETE;
 	}
 
-void sineTable_Init(void){
+void wave_table_init(void){
 	// table[k] = sin(2*pi*k/N)
-	for(int inx = 0; inx < SINE_TABLE_SIZE; inx++) {
-		float sineval = VOLUME * sinf(_2PI * ((float)inx/(float)SINE_TABLE_SIZE) );
-		SineTable[inx] = SCALE_24BITS(sineval);
+	for(int inx = 0; inx < WAVE_TABLE_SIZE; inx++) {
+		// fundamental plus harmonic
+		float wave = VOLUME * sinf(_2PI * ((float)inx/(float)WAVE_TABLE_SIZE) ) +
+					(VOLUME/2) * sinf(_2PI * ((float)(2*inx)/(float)WAVE_TABLE_SIZE) );
+		WaveTable[inx] = FLOAT_2_24BITS(wave);
 		}
-	// Used for interpolating when integer part of PhaseAccumulator == SINE_TABLE_SIZE-1
-	SineTable[SINE_TABLE_SIZE] = SineTable[0];
+	// Used for interpolating when integer part of PhaseAccumulator == WAVE_TABLE_SIZE-1
+	WaveTable[WAVE_TABLE_SIZE] = WaveTable[0];
 	}
 
 
-void dds_Calculate(uint16_t* buffer, int num_samples) {
+void dds_calculate(uint16_t* buffer, int numSamples) {
 	// @ Fs = 48000Hz, it takes 64/48000 = 1.333mS to transmit 64 stereo samples
 	// The DDS calculation needs to execute in less than this time.
 	// Running at 96MHz the STM32F411CEU6 completes this in 61.3uS without interpolation, 83.2uS with interpolation
 	BLU_LED_OFF(); // monitor pulse strobe width on logic analyzer or scope for execution time
-	for(int inx = 0; inx < num_samples; inx++) {
+	for(int inx = 0; inx < numSamples; inx++) {
 		PhaseAccumulator += PhaseIncrement;
 		while (PhaseAccumulator >= MAX_PHASE_ACCUM) PhaseAccumulator -= MAX_PHASE_ACCUM;
 		uint32_t tableIndex = (PhaseAccumulator >> 16); // integer portion of PhaseAccumulator
 
 		// without interpolation
-		// int32_t sine24 = SineTable[tableIndex];
+		// int32_t wave24 = WaveTable[tableIndex];
 
 		// interpolated value
-		int32_t v1 = SineTable[tableIndex]; // nearest neighbours
-		int32_t v2 = SineTable[tableIndex+1];
+		int32_t v1 = WaveTable[tableIndex]; // nearest neighbours
+		int32_t v2 = WaveTable[tableIndex+1];
 		uint32_t fractional = PhaseAccumulator & 65535;
-		int32_t sine24 = v1 + ((v2-v1)*(int32_t)fractional)/65536; // linear interpolation
-		uint32_t usine24 =  (uint32_t) sine24;
+		int32_t wave24 = v1 + ((v2-v1)*(int32_t)fractional)/65536; // linear interpolation
+		uint32_t uwave24 =  (uint32_t) wave24;
 		// l and r channels are identical 24bit 2's complement left-justified in a 32bit frame
-		buffer[4*inx] = buffer[4*inx+2] = (uint16_t)((usine24 >> 8) & 0x0000FFFF);
-		buffer[4*inx + 1] = buffer[4*inx+3] = (uint16_t)((usine24 & 0x000000FF) << 8);
+		buffer[4*inx] = buffer[4*inx+2] = (uint16_t)((uwave24 >> 8) & 0x0000FFFF);
+		buffer[4*inx + 1] = buffer[4*inx+3] = (uint16_t)((uwave24 & 0x000000FF) << 8);
     	}
 	BLU_LED_ON();
 	}
@@ -210,18 +212,18 @@ int main(void)
   MX_I2S2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  print_Msg("\r\nDDS generation of 24-bit I2S stereo 1kHz sine wave @ Fs = 48kHz\r\n");
-  // initialize sine wave table
-  sineTable_Init();
-  // table increment for every generated sinewave sample in 16.16 fixed point resolution
-  PhaseIncrement = FLOAT_2_FIXED16(SINE_WAVE_FREQ_HZ * (float)SINE_TABLE_SIZE / FS_HZ );
+  print_msg("\r\nDDS generation of 24-bit I2S stereo 1kHz sine wave @ Fs = 48kHz\r\n");
+  // initialize periodic waveform table
+  wave_table_init();
+  // table increment for every generated sample in 16.16 fixed point resolution
+  PhaseIncrement = FLOAT_2_FIXED16(WAVE_FREQ_HZ * (float)WAVE_TABLE_SIZE / FS_HZ );
   BLU_LED_ON(); // strobe used for monitoring execution time of DDS buffer recalculation
 
   // populate entire TxBuf
-  dds_Calculate(TxBuf, TXBUF_SIZE/4);
+  dds_calculate(TxBuf, TXBUF_SIZE/4);
 
   // set i2s clock pll registers for 48kHz 24bit stream
-  i2s_ClockConfig();
+  i2s_clock_config();
 
   // The I2S peripheral internally transfers data in 16bit chunks, so the source buffer needs
   // to be uint16_t.
@@ -242,7 +244,7 @@ int main(void)
 	    	// DMA has transmitted the first half of TxBuf, we
 	    	// can re-calculate it  while DMA transmits the second half
 	    	// each half contains 64 stereo samples
-     	    dds_Calculate(&TxBuf[0], TXBUF_SIZE/8);
+     	    dds_calculate(&TxBuf[0], TXBUF_SIZE/8);
 	    	TxState = DMA_IN_PROGRESS;
 	    	TOGGLE_RED_LED();
 	    	}
@@ -250,7 +252,7 @@ int main(void)
 	    if (TxState == DMA_COMPLETE) {
 	    	// DMA has transmitted the second half of TxBuf, we
 	    	// can re-calculate it while DMA transmits the first half
-     	    dds_Calculate(&TxBuf[TXBUF_SIZE/2], TXBUF_SIZE/8);
+     	    dds_calculate(&TxBuf[TXBUF_SIZE/2], TXBUF_SIZE/8);
 	    	TxState = DMA_IN_PROGRESS;
 	    	TOGGLE_GRN_LED();
 	    	}
@@ -431,9 +433,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 
-// I2S clock configuration for Fs=48kHz, 24/32 data format
+// I2S clock configuration for Fs = 48kHz, 24/32 Philips data format
 // ref : Tech Ref Manual RM0383
-void i2s_ClockConfig() {
+void i2s_clock_config() {
 	RCC_PeriphCLKInitTypeDef RCC_ExCLKInitStruct;
     uint32_t N, R, I2SDIV, ODD, MCKOE, I2S_PR;
 #ifdef USE_MCLK_OUT
@@ -458,11 +460,11 @@ void i2s_ClockConfig() {
     RCC_ExCLKInitStruct.PLLI2S.PLLI2SR = R;
     HAL_RCCEx_PeriphCLKConfig(&RCC_ExCLKInitStruct);
     I2S_PR = (MCKOE<<9) | (ODD<<8) | I2SDIV;
-    i2s_Config_I2SPR(I2S_PR);
+    i2s_config_PR(I2S_PR);
 	}
 
 
-HAL_StatusTypeDef i2s_Config_I2SPR(uint32_t regVal) {
+HAL_StatusTypeDef i2s_config_PR(uint32_t regVal) {
 	uint32_t tickstart = 0U;
     __HAL_RCC_PLLI2S_DISABLE();
     tickstart = HAL_GetTick();
@@ -485,7 +487,7 @@ HAL_StatusTypeDef i2s_Config_I2SPR(uint32_t regVal) {
    }
 
 
-void print_Msg(char* format, ...) {
+void print_msg(char* format, ...) {
 	char sz[100];
 	va_list args;
 	va_start(args, format);
