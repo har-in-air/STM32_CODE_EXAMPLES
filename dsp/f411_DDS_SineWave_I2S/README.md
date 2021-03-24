@@ -7,9 +7,9 @@
 	* Amplitude = `VOLUME`
 * This project example demonstrates the resolution capability of direct digital synthesis.
 * The L channel generates a 440.0Hz (musical A note) with harmonic at 880Hz. The R channel
-generates a 440.5fHz with harmonic at 881Hz. 
+generates a 440.5Hz with harmonic at 881Hz. 
 * When played back through stereo speakers, or if you sum the channels before playback on a 
- mono speaker(MAX98357 I2S DAC default configuration), you will hear a beat note at 0.5Hz. 
+ mono speaker (MAX98357 I2S DAC default configuration), you will hear a stable beat note at 0.5Hz. 
 * I2S peripheral configured in half-duplex master transmit mode
 * Circular DMA transmit from sample buffer to I2S peripheral with half-complete and full-complete
   callbacks for the DDS code to generate new samples
