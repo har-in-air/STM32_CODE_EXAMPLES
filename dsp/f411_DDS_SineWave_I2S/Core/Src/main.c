@@ -64,32 +64,44 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Direct Digital Synthesis of I2S  periodic waveform (24bit resolution @ Fs = 48KHz)
-// In this example, a 440Hz (A note) sine wave  with a harmonic at 880Hz.
+// Direct Digital Synthesis of I2S periodic waveform (24bit resolution @ Fs = 48KHz)
+// Stereo L and R channels can have different frequencies
+// In this example, the left channel generates a 440.0Hz (musical 'A' note) sine wave
+// with a harmonic at 880Hz.
+// The right channel generates a 440.5Hz note with harmonic at 881Hz.
+// When both channels are played back through speakers or if you sum the channels
+// before playback (MAX98357 default configuration), you will hear a beat note at
+// 0.5Hz, demonstrating the resolution capability of DDS.
+//
 // User configurable inputs are :
-// Fundamental frequency = WAVE_FREQ_HZ
+// Fundamental frequency L channel = L_WAVE_FREQ_HZ
+// Fundamental frequency R channel = R_WAVE_FREQ_HZ
 // Fundamental amplitude = VOLUME
+//
 // Implemented on WeAct STM32F411CEU6 Black Pill dev board. Will also
 // work with trivial mods on the cheaper STM32F401CCU6 Black Pill board.
+//
 // credits : https://github.com/dimtass/stm32f407_dds_dac,
 //           https://www.youtube.com/watch?v=YDC5zaEZGhM
 //           https://github.com/YetAnotherElectronicsChannel/STM32_PDM_Microphone
+
+
+#define L_WAVE_FREQ_HZ 	    440.0f
+#define R_WAVE_FREQ_HZ      440.5f
+#define VOLUME              0.25f // [0.001 - 0.999]
+
+//
 ///////////////////////////////////////////////////////////////////////////////
 
+#define _2PI                6.283185307f
+#define _PI                 3.14159265f
 
-#define WAVE_FREQ_HZ 	440.0f
-#define VOLUME				0.25f // [0.001 - 0.999]
+#define FS_HZ               48000.0f
 
-///////////////////////////////////////////////////////////////////////////////
-
-#define _2PI            6.283185307f
-#define _PI             3.14159265f
-
-#define FS_HZ				48000.0f
-
-#define WAVE_TABLE_SIZE 	2048
+#define WAVE_TABLE_SIZE     2048
 
 // convert float to 24bit 2's complement
 #define FLOAT_2_24BITS(fval)  	( (fval) * (((int32_t)1) << 23) )
@@ -102,8 +114,12 @@ int32_t WaveTable[WAVE_TABLE_SIZE + 1];	// +1 for interpolation
 
 #define MAX_PHASE_ACCUM (((uint32_t)WAVE_TABLE_SIZE) << 16)
 
-uint32_t PhaseAccumulator = 0;
-uint32_t PhaseIncrement;
+// stereo L and R channels with different frequencies
+uint32_t LPhaseAccumulator = 0;
+uint32_t LPhaseIncrement;
+
+uint32_t RPhaseAccumulator = 0;
+uint32_t RPhaseIncrement;
 
 #define TXBUF_SIZE 	512
 // TxBuf contains stereo L, R 24bit samples encoded in 32bits as
@@ -154,27 +170,42 @@ void wave_table_init(void){
 
 void dds_calculate(uint16_t* buffer, int numSamples) {
 	// @ Fs = 48000Hz, it takes 64/48000 = 1.333mS to transmit 64 stereo samples
-	// The DDS calculation needs to execute in less than this time.
-	// Running at 96MHz the STM32F411CEU6 completes this in 61.3uS without interpolation, 83.2uS with interpolation
-	BLU_LED_OFF(); // monitor pulse strobe width on logic analyzer or scope for execution time
+	// The DDS buffer generation needs to execute in less than this time.
+	// Running at 96MHz the STM32F411CEU6 completes in 0.135mS with interpolation
+	BLU_LED_OFF(); // check pulse strobe width on logic analyzer/scope for execution time
+	uint32_t tableIndex,fractional,uwave24;
+	int32_t v1,v2,swave24;
 	for(int inx = 0; inx < numSamples; inx++) {
-		PhaseAccumulator += PhaseIncrement;
-		while (PhaseAccumulator >= MAX_PHASE_ACCUM) PhaseAccumulator -= MAX_PHASE_ACCUM;
-		uint32_t tableIndex = (PhaseAccumulator >> 16); // integer portion of PhaseAccumulator
+		// L channel
+		LPhaseAccumulator += LPhaseIncrement;
+		while (LPhaseAccumulator >= MAX_PHASE_ACCUM) LPhaseAccumulator -= MAX_PHASE_ACCUM;
+		tableIndex = (LPhaseAccumulator >> 16); // integer portion of LPhaseAccumulator
+		// swave24 = WaveTable[tableIndex]; // without interpolation
+		// with interpolation
+		v1 = WaveTable[tableIndex]; // nearest neighbours
+		v2 = WaveTable[tableIndex+1];
+		fractional = LPhaseAccumulator & 65535;
+		swave24 = v1 + ((v2-v1)*(int32_t)fractional)/65536; // linear interpolation
+		uwave24 =  (uint32_t) swave24;
+		 // I2S data format : 24bit 2's complement left-justified in a 32bit frame
+		buffer[4*inx]   = (uint16_t)((uwave24 >> 8) & 0x0000FFFF);
+		buffer[4*inx+1] = (uint16_t)((uwave24 & 0x000000FF) << 8);
 
-		// without interpolation
-		// int32_t wave24 = WaveTable[tableIndex];
-
-		// interpolated value
-		int32_t v1 = WaveTable[tableIndex]; // nearest neighbours
-		int32_t v2 = WaveTable[tableIndex+1];
-		uint32_t fractional = PhaseAccumulator & 65535;
-		int32_t wave24 = v1 + ((v2-v1)*(int32_t)fractional)/65536; // linear interpolation
-		uint32_t uwave24 =  (uint32_t) wave24;
-		// l and r channels are identical 24bit 2's complement left-justified in a 32bit frame
-		buffer[4*inx] = buffer[4*inx+2] = (uint16_t)((uwave24 >> 8) & 0x0000FFFF);
-		buffer[4*inx + 1] = buffer[4*inx+3] = (uint16_t)((uwave24 & 0x000000FF) << 8);
-    	}
+		// R channel
+		RPhaseAccumulator += RPhaseIncrement;
+		while (RPhaseAccumulator >= MAX_PHASE_ACCUM) RPhaseAccumulator -= MAX_PHASE_ACCUM;
+		tableIndex = (RPhaseAccumulator >> 16); // integer portion of RPhaseAccumulator
+		// swave24 = WaveTable[tableIndex]; // without interpolation
+		// with interpolation
+		v1 = WaveTable[tableIndex]; // nearest neighbours
+		v2 = WaveTable[tableIndex+1];
+		fractional = RPhaseAccumulator & 65535;
+		swave24 = v1 + ((v2-v1)*(int32_t)fractional)/65536; // linear interpolation
+		uwave24 =  (uint32_t) swave24;
+		 // I2S data format : 24bit 2's complement left-justified in a 32bit frame
+		buffer[4*inx+2] = (uint16_t)((uwave24 >> 8) & 0x0000FFFF);
+		buffer[4*inx+3] = (uint16_t)((uwave24 & 0x000000FF) << 8);
+		}
 	BLU_LED_ON();
 	}
 
@@ -216,7 +247,8 @@ int main(void)
   // initialize periodic waveform table
   wave_table_init();
   // table increment for every generated sample in 16.16 fixed point resolution
-  PhaseIncrement = FLOAT_2_FIXED16(WAVE_FREQ_HZ * (float)WAVE_TABLE_SIZE / FS_HZ );
+  LPhaseIncrement = FLOAT_2_FIXED16(L_WAVE_FREQ_HZ * (float)WAVE_TABLE_SIZE / FS_HZ );
+  RPhaseIncrement = FLOAT_2_FIXED16(R_WAVE_FREQ_HZ * (float)WAVE_TABLE_SIZE / FS_HZ );
   BLU_LED_ON(); // strobe used for monitoring execution time of DDS buffer recalculation
 
   // populate entire TxBuf
@@ -241,21 +273,21 @@ int main(void)
   while (1)
   {
 	    if (TxState == DMA_HALF_COMPLETE) {
-	    	// DMA has transmitted the first half of TxBuf, we
-	    	// can re-calculate it  while DMA transmits the second half
-	    	// each half contains 64 stereo samples
-     	    dds_calculate(&TxBuf[0], TXBUF_SIZE/8);
-	    	TxState = DMA_IN_PROGRESS;
-	    	TOGGLE_RED_LED();
-	    	}
+			// DMA has transmitted the first half of TxBuf, we
+			// can re-calculate it  while DMA transmits the second half
+			// each half contains 64 stereo samples
+			dds_calculate(&TxBuf[0], TXBUF_SIZE/8);
+			TxState = DMA_IN_PROGRESS;
+			TOGGLE_RED_LED();
+			}
 
 	    if (TxState == DMA_COMPLETE) {
-	    	// DMA has transmitted the second half of TxBuf, we
-	    	// can re-calculate it while DMA transmits the first half
-     	    dds_calculate(&TxBuf[TXBUF_SIZE/2], TXBUF_SIZE/8);
-	    	TxState = DMA_IN_PROGRESS;
-	    	TOGGLE_GRN_LED();
-	    	}
+			// DMA has transmitted the second half of TxBuf, we
+			// can re-calculate it while DMA transmits the first half
+			dds_calculate(&TxBuf[TXBUF_SIZE/2], TXBUF_SIZE/8);
+			TxState = DMA_IN_PROGRESS;
+			TOGGLE_GRN_LED();
+			}
 
     /* USER CODE END WHILE */
 
