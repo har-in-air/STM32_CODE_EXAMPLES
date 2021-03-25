@@ -91,7 +91,7 @@ static void MX_USART2_UART_Init(void);
 
 #define L_WAVE_FREQ_HZ 	    440.0f
 #define R_WAVE_FREQ_HZ      440.5f
-#define VOLUME              0.25f // [0.001 - 0.999]
+#define VOLUME              0.25f // Range [0.1 - 0.5]
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -160,7 +160,7 @@ void wave_table_init(void){
 	for(int inx = 0; inx < WAVE_TABLE_SIZE; inx++) {
 		// fundamental plus harmonic
 		float wave = VOLUME * sinf(_2PI * ((float)inx/(float)WAVE_TABLE_SIZE) ) +
-					(VOLUME/2) * sinf(_2PI * ((float)(2*inx)/(float)WAVE_TABLE_SIZE) );
+					(VOLUME/4) * sinf(_2PI * ((float)(2*inx)/(float)WAVE_TABLE_SIZE) );
 		WaveTable[inx] = FLOAT_2_24BITS(wave);
 		}
 	// Used for interpolating when integer part of PhaseAccumulator == WAVE_TABLE_SIZE-1
