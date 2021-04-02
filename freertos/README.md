@@ -7,11 +7,11 @@
 
 # Integrating FreeRTOS with an STM32CubeIDE project
 
-See the project `freertos_f411_hello_world` for details
+See the project [freertos_f411_hello_world](https://github.com/har-in-air/STM32_CODE_EXAMPLES/tree/master/freertos/freertos_f411_hello_world) for details
 
 # Integrating Segger SystemView with FreeRTOS in STM32CubeIDE
 
-See the project `freertos_f411_hello_world_sysview` for details
+See the project [freertos_f411_hello_world_sysview](https://github.com/har-in-air/STM32_CODE_EXAMPLES/tree/master/freertos/freertos_f411_hello_world_sysview) for details
 
 ## Credits
 
