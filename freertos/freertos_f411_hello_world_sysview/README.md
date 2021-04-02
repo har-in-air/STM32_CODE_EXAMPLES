@@ -145,8 +145,9 @@ a couple of seconds, to allow the RTT trace buffer to fill.
 
 <img src="SystemView.png" />
 	
-* To trace software timer entry and exit, add this to `SEGGER/OS/SEGGER_SYSVIEW_FreeRTOS.h` and add the
-directory `SEGGER/OS` to the C/C++ build settings include paths. See the freertos_f411_queue project example.
+* To trace software timer entry and exit, add these macros to `SEGGER/OS/SEGGER_SYSVIEW_FreeRTOS.h` and add the
+directory `SEGGER/OS` to the C/C++ build settings include paths. See the `freertos_f411_queue` project for
+an example.
 ```
 #define traceTIMER_ENTER(pxTimer)	SEGGER_SYSVIEW_RecordEnterTimer((U32)pxTimer)
 #define traceTIMER_EXIT()		SEGGER_SYSVIEW_RecordExitTimer()
