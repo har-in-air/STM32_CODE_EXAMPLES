@@ -3,7 +3,6 @@
 // Demos task notification from isr, queues, software timer
 
 /* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
@@ -35,7 +34,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
@@ -44,7 +43,7 @@ UART_HandleTypeDef huart1;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART1_UART_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -86,62 +85,62 @@ char menu[]={"\
 #define LED_TOGGLE_STOP_COMMAND 4
 #define LED_READ_STATUS_COMMAND 5
 
-void taskUartWrite(void* pParams);
-void taskCmdHandler(void* pParams);
-void taskCmdProcessor(void* pParams);
-void taskMenuDisplay(void* pParams);
+void task_uart_write(void* pParams);
+void task_command_handler(void* pParams);
+void task_command_processor(void* pParams);
+void task_menu_display(void* pParams);
 
-void printMsg(char *format,...);
-void printSz(char *msg);
-void busyDelay(uint32_t delay_in_ms);
-uint8_t getCommandCode(uint8_t *buffer);
-void ledOn(void);
-void ledOff(void);
+void print_msg(char *format,...);
+void print_uart_sz(char *msg);
+void busy_delay(uint32_t delay_in_ms);
+uint8_t get_command_code(uint8_t *buffer);
+void led_on(void);
+void led_off(void);
 void ledToggle(TimerHandle_t xTimer);
-void ledToggleStart(uint32_t duration);
-void ledToggleStop(void);
+void led_toggle_start(uint32_t duration);
+void led_toggle_stop(void);
 
 
-void busyDelay(uint32_t delay_in_ms){
+void busy_delay(uint32_t delay_in_ms){
 	uint32_t current_tick_count = xTaskGetTickCount();
 	uint32_t delay_in_ticks = (delay_in_ms * configTICK_RATE_HZ ) /1000 ;
 	while(xTaskGetTickCount() <  (current_tick_count + delay_in_ticks));
 	}
 
-void printSz(char *msg){
+void print_uart_sz(char *msg){
 	for(int inx = 0; inx < strlen(msg); inx++)	{
-		while (!(huart1.Instance->SR & UART_FLAG_TXE));
-		huart1.Instance->DR = (uint16_t) msg[inx];
+		while (!(huart2.Instance->SR & UART_FLAG_TXE));
+		huart2.Instance->DR = (uint16_t) msg[inx];
 		}
-	while (!(huart1.Instance->SR & UART_FLAG_TC));
+	while (!(huart2.Instance->SR & UART_FLAG_TC));
 	}
 
-void printMsg(char *format,...){
+void print_msg(char *format,...){
 	char str[120];
 	va_list args;
 	va_start(args, format);
 	vsprintf(str, format,args);
-	printSz(str);
+	print_uart_sz(str);
 	va_end(args);
  	}
 
-void EXTI9_5_IRQHandler(void){
+void EXTI0_IRQHandler(void){
 	traceISR_ENTER();
-	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_6);
+	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
 	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 	traceISR_EXIT();
 	}
 
-void USART1_IRQHandler(void) {
+void USART2_IRQHandler(void) {
 	// do NOT call the HAL irq handler !
 	traceISR_ENTER();
 	uint16_t dataByte;
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	uint32_t isrflags   = READ_REG(huart1.Instance->SR);
+	uint32_t isrflags   = READ_REG(huart2.Instance->SR);
 	if(isrflags & USART_SR_RXNE)	{
 		// RX not empty interrupt received
 		// reading the DR register clears the RXNE interrupt
-		dataByte = huart1.Instance->DR & (uint16_t)0xFF;
+		dataByte = huart2.Instance->DR & (uint16_t)0xFF;
 		commandBuffer[commandLen++] = (uint8_t)dataByte;
 		if(dataByte == '\r')		{
 			// user is finished entering the data
@@ -164,15 +163,15 @@ void USART1_IRQHandler(void) {
 	}
 
 
-uint8_t getCommandCode(uint8_t *buffer){
+uint8_t get_command_code(uint8_t *buffer){
 	return buffer[0]-48;
 	}
 
-void ledOn(void){
+void led_on(void){
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 	}
 
-void ledOff(void){
+void led_off(void){
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 	}
 
@@ -182,7 +181,7 @@ void ledToggle(TimerHandle_t xTimer){
 	traceTIMER_EXIT();
 	}
 
-void ledToggleStart(uint32_t duration){
+void led_toggle_start(uint32_t duration){
 	if(ledTimerHandle == NULL)	{
 		ledTimerHandle = xTimerCreate("LED_TIMER", duration, pdTRUE, NULL, ledToggle);
 		}
@@ -190,23 +189,23 @@ void ledToggleStart(uint32_t duration){
 	}
 
 
-void ledToggleStop(void){
+void led_toggle_stop(void){
 	 xTimerStop(ledTimerHandle,portMAX_DELAY);
 	}
 
 
-void readLedStatus(char *taskMsg){
+void read_led_status(char *taskMsg){
 	sprintf(taskMsg , "\r\nLED status is : %s\r\n", HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) ? "OFF" : "ON");
 	xQueueSend(queueUartWrite, &taskMsg, portMAX_DELAY);
 	}
 
-void printErrorMessage(char *taskMsg){
+void print_error_message(char *taskMsg){
 	sprintf( taskMsg,"\r\nInvalid command received\r\n");
 	xQueueSend(queueUartWrite, &taskMsg,portMAX_DELAY);
 	}
 
 
-void taskMenuDisplay(void *params){
+void task_menu_display(void *params){
 	char *pData = menu;
 	while(1)	{
 		xQueueSend(queueUartWrite, &pData, portMAX_DELAY);
@@ -215,7 +214,7 @@ void taskMenuDisplay(void *params){
 		}
 	}
 
-void taskCmdHandler(void *params){
+void task_command_handler(void *params){
 	uint8_t commandCode=0;
 	APP_CMD *newCmd;
 	while(1)	{
@@ -223,7 +222,7 @@ void taskCmdHandler(void *params){
 		newCmd = (APP_CMD*) pvPortMalloc(sizeof(APP_CMD));
 
 		taskENTER_CRITICAL();
-		commandCode = getCommandCode(commandBuffer);
+		commandCode = get_command_code(commandBuffer);
 		taskEXIT_CRITICAL();
 
 		newCmd->COMMAND_NUM = commandCode;
@@ -232,7 +231,7 @@ void taskCmdHandler(void *params){
 	}
 
 
-void taskCmdProcessor(void *params){
+void task_command_processor(void *params){
 	APP_CMD *newCmd;
 	char taskMsg[50];
 	uint32_t toggleDuration = pdMS_TO_TICKS(50);
@@ -241,27 +240,27 @@ void taskCmdProcessor(void *params){
 		xQueueReceive(queueCommand, (void*)&newCmd, portMAX_DELAY);
 		switch (newCmd->COMMAND_NUM) {
 		case LED_ON_COMMAND:
-			ledOn();
+			led_on();
 			break;
 
 		case LED_OFF_COMMAND:
-			ledOff();
+			led_off();
 		    break;
 
 		case LED_TOGGLE_COMMAND:
-			ledToggleStart(toggleDuration);
+			led_toggle_start(toggleDuration);
 			break;
 
 		case LED_TOGGLE_STOP_COMMAND:
-			ledToggleStop();
+			led_toggle_stop();
 		    break;
 
 		case LED_READ_STATUS_COMMAND:
-			readLedStatus(taskMsg);
+			read_led_status(taskMsg);
 		    break;
 
 		default :
-			printErrorMessage(taskMsg);
+			print_error_message(taskMsg);
 			break;
 			}
 
@@ -273,11 +272,11 @@ void taskCmdProcessor(void *params){
 
 
 
-void taskUartWrite(void *params){
+void task_uart_write(void *params){
 	char *pData = NULL;
 	while(1)	{
 		xQueueReceive(queueUartWrite, &pData, portMAX_DELAY);
-		printSz(pData);
+		print_uart_sz(pData);
 		}
 	}
 
@@ -291,10 +290,8 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	DWT->CTRL |= (1 << 0); // enable CYCCNT for SystemView
 
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -317,12 +314,12 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  printSz("Queue Demo\r\n");
-
-  printMsg("SystemCoreClock %lu\r\n", SystemCoreClock);
+  print_msg("SystemCoreClock %lu\r\n", SystemCoreClock);
+  print_msg("Queue Demo\r\n");
+  DWT->CTRL |= (1 << 0); // enable CYCCNT for SystemView
 
   SEGGER_SYSVIEW_Conf();
   vSetVarulMaxPRIGROUPValue();
@@ -332,19 +329,17 @@ int main(void)
 	queueUartWrite = xQueueCreate(10, sizeof(char*));
 
 	if((queueCommand != NULL) && (queueUartWrite != NULL))	{
-		xTaskCreate(taskUartWrite, "tskUartWrite", 500, NULL, 2, &xTaskUartWrite);
-		xTaskCreate(taskMenuDisplay, "tskMenuDisplay", 500, NULL, 1, &xTaskMenuDisplay);
-		xTaskCreate(taskCmdHandler, "tskCmdHandler", 500, NULL, 2, &xTaskCmdHandler);
-		xTaskCreate(taskCmdProcessor, "tskCmdProcessor", 500, NULL, 2, &xTaskCmdProcessor);
+		xTaskCreate(task_uart_write, "tskUartWrite", 500, NULL, 2, &xTaskUartWrite);
+		xTaskCreate(task_menu_display, "tskMenuDisplay", 500, NULL, 1, &xTaskMenuDisplay);
+		xTaskCreate(task_command_handler, "tskCmdHandler", 500, NULL, 2, &xTaskCmdHandler);
+		xTaskCreate(task_command_processor, "tskCmdProcessor", 500, NULL, 2, &xTaskCmdProcessor);
 	    vTaskStartScheduler();
 		}
 	else{
-		printMsg("Queue creation failed\r\n");
+		print_msg("Queue creation failed\r\n");
 		}
 
   /* USER CODE END 2 */
- 
- 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -355,7 +350,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-	  printMsg("main loop %d\r\n", counter++);
+	  print_msg("main loop %d\r\n", counter++);
 	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
@@ -370,11 +365,12 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -388,7 +384,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -404,38 +400,35 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief USART1 Initialization Function
+  * @brief USART2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_USART1_UART_Init(void)
+static void MX_USART2_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART1_Init 0 */
+  /* USER CODE BEGIN USART2_Init 0 */
 
-  /* USER CODE END USART1_Init 0 */
+  /* USER CODE END USART2_Init 0 */
 
-  /* USER CODE BEGIN USART1_Init 1 */
-  huart1.Init.BaudRate = 115200;
+  /* USER CODE BEGIN USART2_Init 1 */
 
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART1_Init 2 */
-  // enable RX not empty interrupt
-  huart1.Instance->CR1 |= USART_CR1_RXNEIE;
-
-  /* USER CODE END USART1_Init 2 */
+  /* USER CODE BEGIN USART2_Init 2 */
+  huart2.Instance->CR1 |= USART_CR1_RXNEIE;
+  /* USER CODE END USART2_Init 2 */
 
 }
 
@@ -455,7 +448,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -464,18 +457,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  // This is the highest possible interrupt priority if you want to call
-  // freertos api from the isr. Otherwise it can be 0 (highest priority)
-  // See FreeRtosConfig.h
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 }
 
@@ -483,7 +473,7 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
-/**
+ /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM1 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
@@ -531,7 +521,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
