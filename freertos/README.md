@@ -13,4 +13,8 @@ See the project `freertos_f411_hello_world` for details
 
 See the project `freertos_f411_hello_world_sysview` for details
 
+## Credits
+
+[FastBit Udemy RTOS course](https://www.udemy.com/course/mastering-rtos-hands-on-with-freertos-arduino-and-stm32fx)
+
 
