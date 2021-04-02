@@ -44,7 +44,7 @@ This has a file `port.c` which has architecture-dependent FreeRTOS code.
 `CORTEX_M4F_STM32F407ZG-SK`. From this folder copy `FreeRTOSConfig.h` to your project folder `/ThirdParty/FreeRTOS`
 * Add `ThirdParty/FreeRTOS/` to the project `...MCU GCC compiler->Include` path
 * Edit your project copy of `FreeRTOSConfig.h` 
-	* `SystemCoreClock` needs to be visible to our compiler. Modify the conditional compile as follows :
+	* `SystemCoreClock` needs to be visible to our compiler.
 ```
 #if defined (__ICCARM__) || defined(__GNUC__) || defined(__CC_ARM)
 #include <stdint.h>
@@ -53,36 +53,21 @@ extern uint32_t SystemCoreClock;
 ```
     * If you are not implementing these hooks, ensure they are disabled. Else you will get build errors 
     with undefined references to `vApplicationTickHook`, etc.
-
 ```
 #define configUSE_TICK_HOOK             	0
 #define configUSE_IDLE_HOOK             	0
 #define configCHECK_FOR_STACK_OVERFLOW		0
 #define configUSE_MALLOC_FAILED_HOOK	  	0
 ```
-
 * With CubeMx navigate to Pinout & Configuration -> NVIC -> Code Generation.
 Uncheck code generation for `System service call ...`, `Pendable request ...` and `Time base ...` as 
 these interrupt handlers are defined in `FreeRTOS ... port.c`. Regenerate code for your project.
-* Build and run your basic test code (e.g. blinking LED and printing to UART) to ensure nothing is broken  by
-the integration of FreeRTOS source code.
+* Build and run your basic test code (e.g. blinking LED and printing to UART) to ensure nothing is broken.
 * For testing FreeRTOS basic functionality, the project `freertos_f411_test` 
-runs two tasks that print messages over the USART2 interface.
-	* Add `#include "FreeRTOS.h"` and `#include "tasks.h"` in your project main.c
-	* Add the freeRTOS tasks after peripheral initialization
-```
-/* USER CODE BEGIN 2 */
-status = xTaskCreate(task1_handler, "Task1", 200 , "hello world from task1", 2, &task1_handle);
-configASSERT(status == pdPASS); // configAssert from FreeRTOSConfig.h traps in a loop if failed
-
-status = xTaskCreate(task2_handler, "Task2", 200 , "hello world from task2", 3, &task2_handle);
-configASSERT(status == pdPASS);
-
-vTaskStartScheduler(); // never returns if successful
-/* USER CODE END 2 */
-```
-* If vTaskStartScheduler() runs successfully, any code you previously placed in the main while(1) loop to test
-	CubeMx generated code will no longer be executed, as vTaskStartScheduler will never return.
+has two tasks that print messages over the USART2 interface. You can build and run this code to test 
+successful integration of FreeRTOS into your STM32CubeIDE project. Note that if `vTaskStartScheduler()` 
+runs successfully, any code you previously placed in the  `while(1)` loop to test CubeMx generated code 
+will no longer be executed, as vTaskStartScheduler will never return.
 
 	
 
