@@ -307,6 +307,10 @@ Notes:
 #define traceISR_EXIT()                             SEGGER_SYSVIEW_RecordExitISR()
 #define traceISR_ENTER()                            SEGGER_SYSVIEW_RecordEnterISR()
 
+// added HN to allow tracing of sw timers in SysView
+#define traceTIMER_ENTER(pxTimer)					SEGGER_SYSVIEW_RecordEnterTimer((U32)pxTimer)
+#define traceTIMER_EXIT()							SEGGER_SYSVIEW_RecordExitTimer()
+
 /*********************************************************************
 *
 *       API functions
