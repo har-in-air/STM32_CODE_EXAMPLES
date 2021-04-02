@@ -101,12 +101,6 @@ and modify the trace buffer size. The STM32F411CEU6 has 128kBytes of RAM, we are
     
 	#define SYSVIEW_RAM_BASE        (0x20000000)    
 ```
-* Enable DWT CycleCounter to enable trace events to be recorded. Add this line of code before
-calling any FreeRTOS api functions :
-```
-  /* USER CODE BEGIN 2 */
-  DWT->CTRL |= (1 << 0); // enable CYCCNT for SystemView
-```
 * Add STM32CubeIDE include paths in Settings->Tool Settings->GCC Compiler
 ```
         /ThirdParty/SEGGER/Config
@@ -117,7 +111,12 @@ calling any FreeRTOS api functions :
 ```
         /ThirdParty/SEGGER/Config
 ```
-
+* Add this line of code in `main.c`
+before calling any FreeRTOS api functions. DWT CycleCounter is enabled so that trace event timestamps can be recorded. 
+```
+  /* USER CODE BEGIN 2 */
+  DWT->CTRL |= (1 << 0); // enable CYCCNT for SystemView
+```
 * Add SystemView config and start statements in `main.c` just after the DWT counter is enabled and
  before any FreeRTOS api calls. 
 ``` 
@@ -127,9 +126,8 @@ calling any FreeRTOS api functions :
 * To avoid `configAssert` error in `SEGGER_SYSVIEW_Start()` caused by 
  un-initialized variable `ulMaxPRIGROUP`, call  `vInitPrioGroupValue()` at the
  end of `HAL_MspInit()` in `stm32f4xx_hal_msp.c`. Add `#include "FreeRTOS.h"` at the top of the file.
- 
-* Build and run in debug mode. 
-* For one-shot recording, when you see the breakpoint in main, click on run, and then pause after
+* Build and run in debug mode. The debugger will stop at the breakpoint at beginning of main().
+* For one-shot recording, click on Run and then Pause after
 a couple of seconds, to allow the RTT trace buffer to fill.  
 * Select STM32CubeIDE toolbar->Window->Perspective->Debug if not already in debug perspective
 * Select STM32CubeIDE toolbar->Window->Show View->Expressions
