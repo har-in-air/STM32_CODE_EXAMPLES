@@ -17,7 +17,8 @@
 ```
 	The application will start up in demo mode. You can load one of the sample svdat files from the archive
 	to examine.
-	* SystemView Target Souces (v3.20). Extract the zip file. The following files are of interest :
+	* SystemView Target Souces (v3.20). Extract the zip file. The following files will be pulled into
+	your STM32CubeIDE project tree
 ```
     /Config
         Global.h
@@ -28,15 +29,13 @@
             /Config
                 /Cortex-M
                     SEGGER_SYSVIEW_Config_FreeRTOS.c
-            /Patch
-                FreeRTOSV10_Core.patch
             SEGGER_SYSVIEW_FreeRTOS.c
             SEGGER_SYSVIEW_FreeRTOS.h        
     /SEGGER
         Everything except for /Syscalls unrelated compiler files
 ```
 * The following steps assume you have a working STM32CubeIDE FreeRTOS project. In this case I copied 
- `freertos_f411_hello_world` to a temp workspace, imported it and renamed it using STM32CubeIDE to 
+ `freertos_f411_hello_world` to a temp workspace, imported it and used STM32CubeIDE to rename it to 
  `freertos_f411_hello_world_sysview`. 
 * Create the following project folder structure under `freertos_f411_hello_world_sysview/ThirdParty`:
 ```
@@ -46,11 +45,13 @@
 	/Patch
 	/SEGGER 
 ```
-* Make sure none of the subfolders are excluded from build
-* Populate the project SystemView subfolders from the source archive as follows.
-	* Copy the patch file from the reference project `freertos_f411_hello_world_sysview`.
-	* In the `/SEGGER/SEGGER` subfolder copy everything from the source archive, then in the `/Syscalls` subfolder,
-  only retain `SEGGER_RTT_Syscalls_GCC.c`, delete the other compiler specific files.
+* Make sure none of the subfolders are excluded from project build
+* Populate the project SystemView subfolders from the source archive as follows :
+	* Copy the patch file `FreeRTOSv202012.00_segger_cm4_v1.path` from the reference project `freertos_f411_hello_world_sysview/ThirdParty/SEGGER/Patch` to your project `/ThirdParty/SEGGER/Patch` folder
+	* In the `/SEGGER/SEGGER` subfolder copy everything from the source archive
+	* In the `/SEGGER/SEGGER/Syscalls` subfolder, delete all compiler-specfific .c files except for
+	 `SEGGER_RTT_Syscalls_GCC.c`
+	* Your `SEGGER` folder tree should look like this
 ```
 /SEGGER
     /Config
@@ -69,8 +70,8 @@
         ...
 ```
 * Patching 
-    * Right click on project  `/ThirdParty`, menu Team->Apply Patch->select patch file
-    * Browse for `FreeRTOSv202012.00_segger_cm4_v1.patch` and select next to patch
+    * Right click on project `/ThirdParty`, select Team->Apply Patch->select patch file
+    * Browse for `FreeRTOSv202012.00_segger_cm4_v1.patch` and click on `Next` to patch
 * Edit `FreeRTOSConfig.h`
    * Add two #defines to list after `#define INCLUDE_vTaskDelay 1`
 ```
