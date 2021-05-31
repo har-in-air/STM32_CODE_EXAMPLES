@@ -35,7 +35,7 @@ USB full-speed HID mouse implemented with STM32F407VGT6 development board using 
 * The board 5V pin is connected to the STLink adapter 5V supply
 * The TTP223 capacitive switch breakout boards are in default configuration - logic high when pressed, logic low otherwise.
 * No HAL or LL libraries - only CMSIS headers used
-* Debugging via STLink SWD adapter SWO trace connected to PB3
+* Debug print logging via SWO trace (pin PB3) 
     
 <img src = "docs/f407_fs_vbus_sense.jpg"/>
 
