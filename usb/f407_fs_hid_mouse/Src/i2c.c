@@ -1,7 +1,7 @@
 #include "util/misc.h"
 #include "i2c.h"
 
-#define CLEAR_ADDR_FLAG() { uint32_t tmp = I2C1->SR1; tmp = I2C1->SR2; (void)tmp;}
+#define CLEAR_ADDR_FLAG() 				{uint32_t tmp = I2C1->SR1; tmp = I2C1->SR2; (void)tmp;}
 
 #define I2C_DUTYCYCLE_2                 0x00000000U
 #define I2C_DUTYCYCLE_16_9              I2C_CCR_DUTY
@@ -9,64 +9,70 @@
 #define I2C_ADDRESSINGMODE_7BIT         0x00004000U
 #define I2C_ADDRESSINGMODE_10BIT        (I2C_OAR1_ADDMODE | 0x00004000U)
 
-#define I2C_DUALADDRESS_DISABLE        0x00000000U
-#define I2C_DUALADDRESS_ENABLE         I2C_OAR2_ENDUAL
+#define I2C_DUALADDRESS_DISABLE        	0x00000000U
+#define I2C_DUALADDRESS_ENABLE         	I2C_OAR2_ENDUAL
 
-#define I2C_GENERALCALL_DISABLE        0x00000000U
-#define I2C_GENERALCALL_ENABLE         I2C_CR1_ENGC
+#define I2C_GENERALCALL_DISABLE        	0x00000000U
+#define I2C_GENERALCALL_ENABLE         	I2C_CR1_ENGC
 
-#define I2C_NOSTRETCH_DISABLE          0x00000000U
-#define I2C_NOSTRETCH_ENABLE           I2C_CR1_NOSTRETCH
+#define I2C_NOSTRETCH_DISABLE          	0x00000000U
+#define I2C_NOSTRETCH_ENABLE           	I2C_CR1_NOSTRETCH
 
 
-#define I2C_CCR_CALCULATION(__PCLK__, __SPEED__, __COEFF__)     (((((__PCLK__) - 1U)/((__SPEED__) * (__COEFF__))) + 1U) & I2C_CCR_CCR)
-#define I2C_RISE_TIME(__FREQRANGE__, __SPEED__)            (((__SPEED__) <= 100000U) ? ((__FREQRANGE__) + 1U) : ((((__FREQRANGE__) * 300U) / 1000U) + 1U))
-#define I2C_SPEED_STANDARD(__PCLK__, __SPEED__)            ((I2C_CCR_CALCULATION((__PCLK__), (__SPEED__), 2U) < 4U)? 4U:I2C_CCR_CALCULATION((__PCLK__), (__SPEED__), 2U))
-#define I2C_SPEED_FAST(__PCLK__, __SPEED__, __DUTYCYCLE__) (((__DUTYCYCLE__) == I2C_DUTYCYCLE_2)? I2C_CCR_CALCULATION((__PCLK__), (__SPEED__), 3U) : (I2C_CCR_CALCULATION((__PCLK__), (__SPEED__), 25U) | I2C_DUTYCYCLE_16_9))
+#define I2C_CCR_CALCULATION(pclk, speed, coeff)     (((((pclk) - 1U)/((speed) * (coeff))) + 1U) & I2C_CCR_CCR)
+#define I2C_RISE_TIME(freqrange, speed)            	(((speed) <= 100000U) ? ((freqrange) + 1U) : ((((freqrange) * 300U) / 1000U) + 1U))
+#define I2C_SPEED_STANDARD(pclk, speed)            	((I2C_CCR_CALCULATION((pclk), (speed), 2U) < 4U)? 4U:I2C_CCR_CALCULATION((pclk), (speed), 2U))
+#define I2C_SPEED_FAST(pclk, speed, dutycycle) 		(((dutycycle) == I2C_DUTYCYCLE_2)? I2C_CCR_CALCULATION((pclk), (speed), 3U) : (I2C_CCR_CALCULATION((pclk), (speed), 25U) | I2C_DUTYCYCLE_16_9))
 
-#define I2C_CLOCK_FREQ_HZ 400000U
+#define I2C_CLOCK_FREQ_HZ 				400000U // fast clock 400kHz
 
+static void i2c_request_read(uint8_t slave_addr,  uint8_t mem_addr);
+static void i2c_request_write(uint8_t slave_addr, uint8_t mem_addr);
+
+// This is a skeletonized version of the HAL I2C api :
+// 1. specific to STM32F407 I2C1
+// 2. minimal interface : init, read_buffer and write_buffer
+// 3. no timeouts
 
 
 void i2c_init() {
-	// Enable clock to GPIOB peripheral in 'RCC_AHBENR'.
+	// Enable clock to GPIOB
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-	// Configures PB6 and PB7 as I2C SCL and SDA (AF4)
+	// Configure PB6 and PB7 as I2C SCL and SDA (AF4)
 	MODIFY_REG(GPIOB->AFR[0],
 		GPIO_AFRL_AFSEL6 | GPIO_AFRL_AFSEL7,
 		_VAL2FLD(GPIO_AFRL_AFSEL6, 4) | _VAL2FLD(GPIO_AFRL_AFSEL7, 4)
 		);
-	// Configures I2C pins to work in alternate function mode = 2 (0= input, 1= output).
+	// Configure I2C pins to work in alternate function mode = 2 (0= input, 1= output).
 	MODIFY_REG(GPIOB->MODER,
 		GPIO_MODER_MODER6 | GPIO_MODER_MODER7,
 		_VAL2FLD(GPIO_MODER_MODER6, 2) | _VAL2FLD(GPIO_MODER_MODER7, 2)
 		);
-	// pullups enabled
+	// Enable internal weak pullups
 	MODIFY_REG(GPIOB->PUPDR,
 		GPIO_PUPDR_PUPD6 | GPIO_PUPDR_PUPD7,
 		_VAL2FLD(GPIO_PUPDR_PUPD6, 1) | _VAL2FLD(GPIO_PUPDR_PUPD7, 1)
 		);
-	// open drain
+	// Set pins to open drain
 	SET_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT6);
 	SET_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT7);
 
-	// enable clock to I2C1 peripheral before modifying registers
-	RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 
+	// enable clock to I2C1 peripheral before accessing I2C1 registers
+	RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 	// disable I2C1 before initialization
 	CLEAR_BIT(I2C1->CR1, I2C_CR1_PE);
-
+	// software reset of I2C peripheral
 	I2C1->CR1 |= I2C_CR1_SWRST;
 	I2C1->CR1 &= ~I2C_CR1_SWRST;
-
+	// need APB1 clock frequency
 	uint32_t pclk1 = get_pclk1_freq();
 	uint32_t pclk1_mhz = get_pclk1_freq()/1000000;
-
 	// Frequency range
 	MODIFY_REG(I2C1->CR2, I2C_CR2_FREQ, pclk1_mhz);
 	// Rise Time
 	MODIFY_REG(I2C1->TRISE, I2C_TRISE_TRISE, I2C_RISE_TIME(pclk1_mhz, I2C_CLOCK_FREQ_HZ));
-	// Speed
+	// Speed 400kHz
 	MODIFY_REG(I2C1->CCR, (I2C_CCR_FS | I2C_CCR_DUTY | I2C_CCR_CCR), I2C_SPEED_FAST(pclk1, I2C_CLOCK_FREQ_HZ, I2C_DUTYCYCLE_2));
 	// Generalcall and NoStretch mode
 	MODIFY_REG(I2C1->CR1, (I2C_CR1_ENGC | I2C_CR1_NOSTRETCH), (I2C_GENERALCALL_DISABLE | I2C_NOSTRETCH_DISABLE));
@@ -78,7 +84,8 @@ void i2c_init() {
 	SET_BIT(I2C1->CR1, I2C_CR1_PE);
 	}
 
-void i2c_request_write(uint8_t slave_addr, uint8_t mem_addr){
+
+static void i2c_request_write(uint8_t slave_addr, uint8_t mem_addr){
 	// Generate Start
 	SET_BIT(I2C1->CR1, I2C_CR1_START);
 	// Wait until SB flag is set
@@ -96,7 +103,8 @@ void i2c_request_write(uint8_t slave_addr, uint8_t mem_addr){
 	while (!(I2C1->SR1 & I2C_SR1_TXE));
 	}
 
-void i2c_request_read(uint8_t slave_addr,  uint8_t mem_addr){
+
+static void i2c_request_read(uint8_t slave_addr,  uint8_t mem_addr){
 	// Enable Acknowledge
 	SET_BIT(I2C1->CR1, I2C_CR1_ACK);
 	// Generate Start
@@ -133,21 +141,18 @@ void i2c_write(uint8_t slave_addr, uint8_t mem_addr,  uint8_t *pData, int num_by
     int count = num_bytes;
     // Send Slave Address and Memory Address
     i2c_request_write(slave_addr, mem_addr);
-
 	while (count)    {
 		// Wait until TXE flag is set
 		while (!(I2C1->SR1 & I2C_SR1_TXE));
 		I2C1->DR = *pData;
 		pData++;
 		count--;
-
 		if ((I2C1->SR1 & I2C_SR1_BTF) && count)      {
 			I2C1->DR = *pData;
 			pData++;
 			count--;
 			}
 		}
-
     // Wait until BTF flag is set
     while(!(I2C1->SR1 & I2C_SR1_BTF));
     // Generate Stop
@@ -160,11 +165,9 @@ void i2c_read(uint8_t slave_addr, uint8_t mem_addr, uint8_t *pData, int num_byte
     while (I2C1->SR2 & I2C_SR2_BUSY);
     // Disable Pos
     CLEAR_BIT(I2C1->CR1, I2C_CR1_POS);
-
     int count = num_bytes;
     // Send Slave Address and Memory Address
     i2c_request_read(slave_addr, mem_addr);
-
     if (count == 1){
 		// Disable Acknowledge
 		CLEAR_BIT(I2C1->CR1, I2C_CR1_ACK);
@@ -183,7 +186,6 @@ void i2c_read(uint8_t slave_addr, uint8_t mem_addr, uint8_t *pData, int num_byte
     else {
 		CLEAR_ADDR_FLAG();
     	}
-
     while (count > 0) {
     	if (count <= 3)  {
     		// One byte
@@ -241,6 +243,5 @@ void i2c_read(uint8_t slave_addr, uint8_t mem_addr, uint8_t *pData, int num_byte
           	  }
       	}
     } // while (count > 0)
-
 }
 
