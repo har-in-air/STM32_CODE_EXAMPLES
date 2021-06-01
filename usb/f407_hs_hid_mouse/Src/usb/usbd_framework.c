@@ -301,6 +301,7 @@ static void usbf_process_control_transfer_stage(){
 	}
 
 
+
 // called each time the interrupts/status register bits are checked
 static void usbf_polled_handler(){
 	usbf_process_control_transfer_stage();
@@ -341,6 +342,4 @@ static void usbf_in_transfer_completed_handler(uint8_t endpoint_number){
 
 static void usbf_out_transfer_completed_handler(uint8_t endpoint_number){
 	}
-
-
 
