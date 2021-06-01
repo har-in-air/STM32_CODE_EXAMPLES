@@ -75,8 +75,8 @@ const USB_CONFIG_DESC_SET_t Config_Desc_Set = {
 		.bNumInterfaces         = 1, // only one function : mouse, so one group of endpoints
 		.bConfigurationValue    = 1, // index of this configuration descriptor
 		.iConfiguration         = 0, // id of string descriptor describing this configuration (0 = none)
-		.bmAttributes           = 0x80 | 0x40, // b7=1 reserved : b6=1 => self-powered : b5=0 => remote wakeup not supported
-		.bMaxPower              = 25 // *2 mA => max current drawn = 50mA
+		.bmAttributes           = 0x80, // b7=1 reserved : b6=1 => self-powered : b5=0 => remote wakeup not supported
+		.bMaxPower              = 50 // *2 mA => max current drawn = 100mA
 	},
 	.interface_desc = {
 		.bLength                = sizeof(USB_INTERFACE_DESC_t),
