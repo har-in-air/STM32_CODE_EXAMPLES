@@ -1,6 +1,6 @@
-# USB FS HID Mouse
+# USB HID Mouse using OTG_HS peripheral
 
-USB full-speed HID mouse implemented with STM32F407VGT6 development board using MPU6050 accelerometer for pointer movement (roll left and right for x movement, pitch up and down for y movement) and two TTP223 capacitive buttons for left and right mouse buttons.
+USB HID mouse implemented with STM32F407VGT6 development board using the USB_OTG_HS peripheral. An MPU6050 accelerometer is used for pointer movement and two TTP223 capacitive buttons are used for left and right mouse buttons. 
 
 ## Credits
 
@@ -23,18 +23,15 @@ USB full-speed HID mouse implemented with STM32F407VGT6 development board using 
 * GY-521 MPU6050 6-axis accelerometer+gyroscope
 * TTP223 capacitive switches
 
-<img src = "docs/f407_hid_mouse.jpg"/>
+<img src = "docs/f407_otg_hs_hid_mouse.jpg"/>
 
   
 ## Project Notes
 
-* USB full-speed HID mouse uses the development board micro-usb interface connected to the USB_OTG_FS interface (PA11, PA12) with PA9 for VBUS sensing.
-* USB device configured as self-powered with VBUS sensing using PA9. Normally the micro-usb connector VBUS 5V supply is connected via L1 to the board 5V supply. L1 is supposed to be a fuse, but is actually a 0-ohm resistor on the dev board (see photo below). I disconnected L1 and soldered a resistor divider with 5K6 and 10K resistors from VBUS to ground to get a sensed voltage ~3.3V which is connected to PA9.  
-  
-<img src = "docs/f407_fs_vbus_sense.jpg"/>
-
+* The WeAct STM32F407VGT6 board has an on-board micro-usb connector connected to the USB_OTG_FS peripheral interface (pins PA11, PA12). However, this project demonstrates the use of the USB_OTG_HS peripheral using internal FS PHY.
+* An external micro-usb breakout board is connected to the USB_OTG_HS interface (PA14, PA15) pins with PA13 for VBUS sensing.
+* USB device configured as self-powered with VBUS sensing using PA13. A 5K6 resistor and 10K resistor in series are connected from the micro-usb breakout board VBUS to ground, and PA13 is connected to the resistor junction to get a ~3.3V VBUS sense voltage.
 * The STLink adapter connector 5V pin supplies power for the board and is connected to one of the dev board 5V pins.
-* You could optionally leave the board in factory state and configure the USB driver as USB bus-powered, no VBUS sensing. This assumes the device is always connected to USB on power-up. This is a little trickier to flash and debug with the STLink clone adapter once usb device firmware has been flashed. You can make this device configuration change if required, after confirming the  "self-powered with VBUS sensing" configuration works.
 * Left and right mouse buttons uses capacitive TTP223 switch modules connected to GPIO pins PD4 and PD5. The switch modules are powered by the board 3V3 supply and are in default configuration : logic high when pressed, logic low otherwise.
 * Mouse pointer x and y movement uses MPU6050 accelerometer readings : roll left and right, pitch up and down.
 * MPU6050 module is powered by the board 3V3 supply and uses I2C1 interface pins PB6 (SCL) and PB7 (SDA). The accelerometer readings are polled at the USB HID configured interval of 50 frames = 50mS.
