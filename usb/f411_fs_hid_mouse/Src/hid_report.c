@@ -13,11 +13,13 @@ void hid_write_mouse_report(){
 	mpu6050_read_accel();
 	int8_t dax = -Ayi;
 	int8_t day = Axi;
+	//int8_t dax = 0;
+	//int8_t day = 0;
 
 	HID_REPORT_t hid_report = {
 		.dx = dax,
 		.dy = day,
-		.buttons = (btn_l<<1) | btn_r
+		.buttons = (btn_r<<1) | btn_l
 		};
     USB_Driver.write_packet(
 		(Config_Desc_Set.mouse_ep_desc.bEndpointAddress & 0x0F),
@@ -25,5 +27,4 @@ void hid_write_mouse_report(){
 		sizeof(HID_REPORT_t)
 		);
 	}
-
 

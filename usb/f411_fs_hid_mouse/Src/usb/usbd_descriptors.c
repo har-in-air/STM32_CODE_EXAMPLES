@@ -56,7 +56,7 @@ const uint8_t HID_Report_Descriptor[] = {
 			HID_REPORT_COUNT(2),
 			// this is an input report, its variable, and absolute (not relative)
 			HID_INPUT(HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
-			// pad the rest of the byte (5bits) specified as constant
+			// pad the rest of the byte (6bits) specified as constant
 			HID_REPORT_SIZE(1),
 			HID_REPORT_COUNT(6),
 			HID_INPUT(HID_IOF_CONSTANT),
@@ -75,7 +75,7 @@ const USB_CONFIG_DESC_SET_t Config_Desc_Set = {
 		.bNumInterfaces         = 1, // only one function : mouse, so one group of endpoints
 		.bConfigurationValue    = 1, // index of this configuration descriptor
 		.iConfiguration         = 0, // id of string descriptor describing this configuration (0 = none)
-		.bmAttributes           = 0x80 | 0x40, // bit 6 : bus powered, bit 5 : sleepable, bit 7 : fixed
+		.bmAttributes           = 0x80 | 0x40, // b7=1 reserved : b6=1 => self-powered : b5=0 => remote wakeup not supported
 		.bMaxPower              = 25 // *2 mA => max current drawn = 50mA
 	},
 	.interface_desc = {

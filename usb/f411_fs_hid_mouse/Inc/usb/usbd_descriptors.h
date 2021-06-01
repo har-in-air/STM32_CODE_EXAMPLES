@@ -21,10 +21,9 @@ typedef struct {
 	USB_ENDPOINT_DESC_t 	mouse_ep_desc;
 } USB_CONFIG_DESC_SET_t;
 
-
-extern const USB_DEVICE_DESC_t Device_Descriptor;
-extern const USB_CONFIG_DESC_SET_t Config_Desc_Set;
-extern const uint8_t HID_Report_Descriptor[];
-extern const int HID_Report_Desc_Size_Bytes;
+extern const USB_DEVICE_DESC_t 		Device_Descriptor;
+extern const USB_CONFIG_DESC_SET_t 	Config_Desc_Set;
+extern const uint8_t 				HID_Report_Descriptor[];
+extern const int 					HID_Report_Desc_Size_Bytes;
 
 #endif /* USB_USBD_DESCRIPTORS_H_ */

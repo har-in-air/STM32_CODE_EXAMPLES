@@ -12,11 +12,10 @@ uint32_t Buffer[8];
 int main(void){
 	config_swdio_pins();
 	system_core_clock_update();
-
-	log_info("Program entry point : SystemCoreClock = %u", SystemCoreClock);
+	log_info("F411 entry point : SystemCoreClock = %u", SystemCoreClock);
 	btn_init();
-    i2c_init();
-    mpu6050_init();
+	i2c_init();
+	mpu6050_init();
 
 	USB_Device.ptr_out_buffer = Buffer;
 	usbd_initialize(&USB_Device);
@@ -25,5 +24,3 @@ int main(void){
 		usbd_poll();
 		}
 	}
-
-

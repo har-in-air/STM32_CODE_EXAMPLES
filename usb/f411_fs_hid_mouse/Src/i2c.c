@@ -30,7 +30,7 @@ static void i2c_request_read(uint8_t slave_addr,  uint8_t mem_addr);
 static void i2c_request_write(uint8_t slave_addr, uint8_t mem_addr);
 
 // This is a skeletonized version of the HAL I2C api :
-// 1. specific to STM32F407 I2C1 with SCL = PB6, SDA = PB7
+// 1. specific to STM32F411 I2C1 with SCL = PB6, SDA = PB7
 // 2. clock frequency 400kHz
 // 3. minimal interface : init, read_buffer and write_buffer
 // 4. polled, no timeouts

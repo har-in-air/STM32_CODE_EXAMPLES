@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "cmsis/device/stm32f4xx.h"
 
-// mouse buttons use PD4 and PD5
+// mouse buttons use PB4 and PB5
 #define GPIO_BTN_L		(1U << 4)
 #define GPIO_BTN_R		(1U << 5)
 

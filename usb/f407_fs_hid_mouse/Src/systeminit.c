@@ -24,12 +24,10 @@ static void configure_core_clock() {
 			FLASH_ACR_LATENCY, // field to clear
 			_VAL2FLD(FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_2WS) // value to write in cleared field
 			);
-
 	// enable HSE
 	SET_BIT(RCC->CR, RCC_CR_HSEON);
 	// wait until HSE is stable
 	while (!READ_BIT(RCC->CR, RCC_CR_HSERDY));
-
 	// configure PLL while it is disabled
 	MODIFY_REG(RCC->PLLCFGR,
 			RCC_PLLCFGR_PLLM | RCC_PLLCFGR_PLLN | RCC_PLLCFGR_PLLP | RCC_PLLCFGR_PLLQ | RCC_PLLCFGR_PLLSRC, // mask to clear
@@ -39,19 +37,15 @@ static void configure_core_clock() {
 			_VAL2FLD(RCC_PLLCFGR_PLLQ, 7) | // Q = 7
 			_VAL2FLD(RCC_PLLCFGR_PLLSRC, 1) // source = HSE
 			);
-
 	// enable PLL module
 	SET_BIT(RCC->CR, RCC_CR_PLLON);
-
 	// wait until PLL output is stable
 	while (!READ_BIT(RCC->CR, RCC_CR_PLLRDY));
-
 	// switch system clock to PLL output
 	MODIFY_REG(RCC->CFGR,
 			RCC_CFGR_SW,
 			_VAL2FLD(RCC_CFGR_SW, RCC_CFGR_SW_PLL)
 			);
-
 	//configure the AHB, APB Prescalers
 	MODIFY_REG(RCC->CFGR,
 			RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2,
@@ -59,10 +53,8 @@ static void configure_core_clock() {
 			_VAL2FLD(RCC_CFGR_PPRE1, 4) | // APB1 PCLK1 = HCLK/2
 			_VAL2FLD(RCC_CFGR_PPRE2, 0) // APB2 PCLK2 = HCLK/1
 			);
-
 	// wait until pll is used as system clock
 	while (READ_BIT(RCC->CFGR, RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL);
-
 	// disable HSI to save power
 	CLEAR_BIT(RCC->CR, RCC_CR_HSION);
 	}
