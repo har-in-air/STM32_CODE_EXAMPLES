@@ -1,6 +1,6 @@
-# USB HID Mouse using OTG_HS peripheral
+# USB HID Self-powered Mouse using OTG_HS peripheral
 
-USB HID mouse implemented with STM32F407VGT6 development board using the USB_OTG_HS peripheral. An MPU6050 accelerometer is used for pointer movement and two TTP223 capacitive buttons are used for left and right mouse buttons. 
+USB HID self-powered mouse implemented with STM32F407VGT6 development board using the USB_OTG_HS peripheral. An MPU6050 accelerometer is used for pointer movement and two TTP223 capacitive buttons are used for left and right mouse buttons. 
 
 ## Credits
 
@@ -28,14 +28,14 @@ USB HID mouse implemented with STM32F407VGT6 development board using the USB_OTG
   
 ## Project Notes
 
-* The WeAct STM32F407VGT6 board has an on-board micro-usb connector connected to the USB_OTG_FS peripheral interface (pins PA11, PA12). However, this project demonstrates the use of the USB_OTG_HS peripheral using internal FS PHY.
-* An external micro-usb breakout board is connected to the USB_OTG_HS interface (PA14, PA15) pins with PA13 for VBUS sensing.
+* The WeAct STM32F407VGT6 board has an on-board micro-usb connector connected to the USB_OTG_FS peripheral interface pins PA11, PA12. However, this project demonstrates the use of the USB_OTG_HS peripheral using internal FS PHY.
+  An external micro-usb breakout board is connected to the USB_OTG_HS interface pins PA14, PA15 with PA13 for VBUS sensing.
 * USB device configured as self-powered with VBUS sensing using PA13. A 5K6 resistor and 10K resistor in series are connected from the micro-usb breakout board VBUS to ground, and PA13 is connected to the resistor junction to get a ~3.3V VBUS sense voltage.
 * The STLink adapter connector 5V pin supplies power for the board and is connected to one of the dev board 5V pins.
 * Left and right mouse buttons uses capacitive TTP223 switch modules connected to GPIO pins PD4 and PD5. The switch modules are powered by the board 3V3 supply and are in default configuration : logic high when pressed, logic low otherwise.
 * Mouse pointer x and y movement uses MPU6050 accelerometer readings : roll left and right, pitch up and down.
-* MPU6050 module is powered by the board 3V3 supply and uses I2C1 interface pins PB6 (SCL) and PB7 (SDA). The accelerometer readings are polled at the USB HID configured interval of 50 frames = 50mS.
-* Debug printf logging via SWO trace (pin PB3).
-* The software does not use HAL or LL libraries - only CMSIS headers.
+* The MPU6050 module is powered by the board 3.3V supply and uses I2C1 interface pins PB6 (SCL) and PB7 (SDA). The accelerometer and buttons are polled at the USB HID configured interval of 50 frames (50mS).
+* Debug printf logging in STM32CubeIDE ITM Data Console via SWO trace using pin PB3.
+* The firmware uses only CMSIS header, no HAL or LL libraries.
     
 

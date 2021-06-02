@@ -1,6 +1,7 @@
-# USB FS HID Mouse
+# USB FS HID Bus-powered Mouse
 
 USB full-speed HID mouse implemented with WeAct STM32F411CEU6 "Black Pill" development board using MPU6050 accelerometer for pointer movement and two TTP223 capacitive buttons for left and right mouse buttons.
+This is configured as bus-powered, with no VBUS sensing i.e. the device assumes it is connected to a USB host if powered on.
 
 ## Credits
 
@@ -26,13 +27,13 @@ USB full-speed HID mouse implemented with WeAct STM32F411CEU6 "Black Pill" devel
   
 ## Project Notes
 
-* USB full-speed HID mouse uses the development board micro-usb interface connected to the USB_OTG_FS interface (PA11, PA12).
-* USB device configured as bus-powered without VBUS sensing (i.e. device assumes it is connected to USB bus if powered on). 
-* The STLINK clone adapter ground, SWO, SWDIO and SWCLK pins are connected to the development board
-* Left and right mouse buttons uses capacitive TTP223 switch modules connected to GPIO pins PB4 and PB5. The switch modules are powered by the board 3V3 supply and are in default configuration : logic high when pressed, logic low otherwise.
-* Mouse pointer x and y movement uses MPU6050 accelerometer readings : roll left and right, pitch up and down.
-* MPU6050 module is powered by the board 3V3 supply and uses I2C1 interface pins PB6 (SCL) and PB7 (SDA). The accelerometer readings are polled at the USB HID configured interval of 50 frames = 50mS.
-* Debug printf logging via SWO trace (pin PB3).
-* The software does not use HAL or LL libraries - only CMSIS headers.
+* USB full-speed HID mouse uses the on-board micro-usb interface connected to the USB_OTG_FS peripheral pins PA11, PA12.
+* USB device configured as bus-powered without VBUS sensing
+* For firmware flashing and debug, the STLINK adapter GROUND, SWO, SWDIO and SWCLK pins are connected to the SWD board interface. The power supply to the board comes from the USB interface.
+* Left and right mouse buttons use capacitive TTP223 switch modules connected to GPIO pins PB4 and PB5. The switch modules are powered by the board 3V3 supply and are in default configuration : logic high when pressed, logic low otherwise.
+* Mouse pointer x and y movement use MPU6050 accelerometer readings : roll left and right, pitch up and down.
+* MPU6050 module is powered by the board 3V3 supply and uses I2C1 interface pins PB6 (SCL) and PB7 (SDA). The accelerometer and buttons are polled at the USB HID configured interval of 50 frames (50mS).
+* Debug printf logging to STM32CubeIDE ITM Data Console via SWO trace using pin PB3.
+* The software uses only CMSIS headers, no HAL or LL libraries.
     
 
