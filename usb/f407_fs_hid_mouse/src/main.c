@@ -1,4 +1,3 @@
-#include "usb/usb_device.h"
 #include "usb/usbd_framework.h"
 #include "util/logger.h"
 #include "util/misc.h"
