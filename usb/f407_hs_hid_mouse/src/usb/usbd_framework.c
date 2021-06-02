@@ -47,7 +47,7 @@ USB_EVENTS_t USB_Events = {
 	};
 
 
-void usbd_initialize(){
+void usbf_initialize(){
 	USB_Device.ptr_out_buffer = Buffer;
 	USB_Driver.initialize_gpio_pins();
 	USB_Driver.initialize_core();
@@ -55,12 +55,12 @@ void usbd_initialize(){
 	}
 
 
-void usbd_poll(){
+void usbf_poll(){
 	USB_Driver.poll();
 	}
 
 
-void usbd_configure(){
+void usbf_configure(){
 	// endpoint 0 was configured on initialization (control endpoint)
 	// here we configure the endpoints associated with this configuration index
 	// not a static function as it is application layer dependent
@@ -183,7 +183,7 @@ static void usbf_process_standard_device_request(){
 			// the device should use
 			log_info("Std_set_config");
 			USB_Device.config_index = pRequest->wValue;
-		    usbd_configure();
+		    usbf_configure();
 			USB_Device.device_state = USB_DEVICE_STATE_CONFIGURED;
 			// no data stage required as the config index was passed in wValue
 			log_info("ctrl xfer stage -> IN-STATUS.");

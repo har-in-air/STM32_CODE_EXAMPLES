@@ -5,7 +5,6 @@
 #include "i2c.h"
 #include "mpu6050.h"
 
-
 int main(void){
 	config_swdio_pins();
 	system_core_clock_update();
@@ -13,10 +12,10 @@ int main(void){
 	btn_init();
     i2c_init();
     mpu6050_init();
-	usbd_initialize();
+	usbf_initialize();
 
 	while(1){
-		usbd_poll();
+		usbf_poll();
 		}
 	}
 

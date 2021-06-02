@@ -11,9 +11,9 @@ int main(void){
 	btn_init();
     i2c_init();
     mpu6050_init();
-	usbd_initialize();
+	usbf_initialize();
 
 	while(1){
-		usbd_poll();
+		usbf_poll();
 		}
 	}

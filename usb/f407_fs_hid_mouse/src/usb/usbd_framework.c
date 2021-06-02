@@ -19,9 +19,8 @@ static void usbf_out_transfer_completed_handler(uint8_t endpoint_number);
 static void usbf_process_standard_interface_request();
 static void usbf_process_class_interface_request();
 
-USB_DEVICE_t 	USB_Device;
-uint32_t 		Buffer[8];
-
+static USB_DEVICE_t USB_Device;
+static uint32_t 	Buffer[8];
 
 // 1. get device descriptor, asks for 64 bytes, though descriptor could be some other size
 //   1a. device sends descriptor with 18bytes  (reason for seeing "malformed packet" in wireshark)
@@ -48,7 +47,7 @@ USB_EVENTS_t USB_Events = {
 	};
 
 
-void usbd_initialize(){
+void usbf_initialize(){
 	USB_Device.ptr_out_buffer = Buffer;
 	USB_Driver.initialize_gpio_pins();
 	USB_Driver.initialize_core();
@@ -56,12 +55,12 @@ void usbd_initialize(){
 	}
 
 
-void usbd_poll(){
+void usbf_poll(){
 	USB_Driver.poll();
 	}
 
 
-void usbd_configure(){
+void usbf_configure(){
 	// endpoint 0 was configured on initialization (control endpoint)
 	// here we configure the endpoints associated with this configuration index
 	// not a static function as it is application layer dependent
@@ -184,7 +183,7 @@ static void usbf_process_standard_device_request(){
 			// the device should use
 			log_info("Std_set_config");
 			USB_Device.config_index = pRequest->wValue;
-		    usbd_configure();
+		    usbf_configure();
 			USB_Device.device_state = USB_DEVICE_STATE_CONFIGURED;
 			// no data stage required as the config index was passed in wValue
 			log_info("ctrl xfer stage -> IN-STATUS.");
