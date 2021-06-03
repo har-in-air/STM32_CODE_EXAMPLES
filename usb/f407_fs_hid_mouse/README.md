@@ -28,12 +28,12 @@ USB full-speed HID self-powered mouse with VBUS sensing, implemented with WeAct 
   
 ## Project Notes
 
-* USB full-speed HID mouse uses the on-board micro-usb interface connected to the USB_OTG_FS peripheral PA11, PA12 pins and PA9 for VBUS sensing.
-* USB device configured as self-powered with VBUS sensing using pin PA9. Normally the micro-usb connector VBUS 5V supply is connected via fuse L1 to the board 5V supply. L1 is supposed to be a fuse, but is actually a 0-ohm resistor on the dev board (see photo below). I disconnected L1 and soldered a resistor divider with 5K6 and 10K resistors from VBUS to ground to get a sensed voltage ~3.3V which is connected to PA9.  
+* USB full-speed HID mouse uses the on-board micro-usb interface connected to the USB_OTG_FS peripheral PA11, PA12 pins,  and PA9 for VBUS sensing.
+* The micro-usb connector VBUS 5V supply is connected via ferrite bead L1 to the board 5V supply. L1 is actually a 0-ohm resistor on the dev board (see photo below). I disconnected L1 and soldered a resistor divider with 5K6 and 10K resistors from VBUS to ground to get a sensed voltage ~3.3V which is connected to PA9.  
   
 <img src = "docs/f407_fs_vbus_sense.jpg"/>
 
-* The STLink adapter connector 5V pin supplies power for the development board via one of the board 5V pins.
+* Since the USB 5V supply has been disconnected, the STLink adapter connector 5V pin now supplies power for the development board via one of the board 5V pins. So now the USB device firmware needs to be configured as self-powered with VBUS sensing. 
 * You could optionally leave the board in factory state and configure the USB driver as USB bus-powered, no VBUS sensing. This assumes the device is always connected to USB on power-on. This is a little trickier to re-flash and debug with the STLink clone adapter once usb device firmware has been flashed. You can opt for this device configuration if required, after confirming the  "self-powered with VBUS sensing" configuration works.
 * Left and right mouse buttons use capacitive TTP223 switch modules connected to GPIO pins PD4 and PD5. The switch modules are powered by the board 3.3V supply and are in default configuration : logic high when pressed, logic low otherwise.
 * Mouse pointer x and y movement use MPU6050 accelerometer readings : roll left and right, pitch up and down.
