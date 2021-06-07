@@ -156,7 +156,7 @@ inline void bsp_mic_send_data(volatile uint16_t *data_in, int16_t *data_out) {
 			data_out[inx] = ProcessBuffer[inx];
 			}
 
-		// transmit the buffer  to the usb controller
+		// write the buffer to the usb controller
 		// here we need to specify the number of stereo samples
 		if (USBD_AUDIO_Data_Transfer(&hUsbDeviceFS, data_out, PROCESS_BUFFER_10MS_SIZE_HWORDS/2) != USBD_OK) {
 			Error_Handler();
@@ -166,15 +166,17 @@ inline void bsp_mic_send_data(volatile uint16_t *data_in, int16_t *data_out) {
 
 
 
-// I2S DMA half-complete HAL callback to process the first 10mS of the data while the
-// DMA device continues to run onward to fill the second half of the buffer.
+// I2S DMA Receive half-complete HAL callback
+// Extract and process the first half (10mS) of I2SRcvBuffer while the DMA engine
+// fills the second half (10ms) of the buffer.
 inline void bsp_mic_i2s_half_complete() {
 	bsp_mic_send_data(I2SRcvBuffer, USBTxBuffer);
 	}
 
 
-// I2S DMA complete HAL callback to process the second 10mS
-// of the data while the DMA  fills the first half of the buffer
+// I2S DMA Receive complete HAL callback
+// Extract and process the second half (10mS) of I2SRcvBuffer while the DMA engine
+// fills the first half (10mS) of the buffer
 inline void bsp_mic_i2s_complete() {
 	bsp_mic_send_data(&I2SRcvBuffer[I2S_RCV_BUFFER_10MS_SIZE_HWORDS], &USBTxBuffer[PROCESS_BUFFER_10MS_SIZE_HWORDS]);
 	}
