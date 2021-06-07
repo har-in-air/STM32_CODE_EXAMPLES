@@ -38,14 +38,15 @@
 #define AUDIO_REQ_SET_CUR                             0x01
 #define AUDIO_OUT_STREAMING_CTRL                      0x02
 
-#define AUDIO_CTRL_REQ_SET_CUR_VOLUME    0x01
-#define AUDIO_CTRL_REQ_SET_CUR_EQUALIZER 0x02
+#define AUDIO_CTRL_REQ_SET_CUR_VOLUME    				0x01
+#define AUDIO_CTRL_REQ_SET_CUR_EQUALIZER 				0x02
 
 #define VOL_MIN                                       0xb000    // -80dB (1 == 1/256dB)
 #define VOL_RES                                       128       // 0.5dB (1 == 1/256dB)
 #define VOL_MAX                                       9216      // 36dB (1 == 1/256dB)
 
-#define AUDIO_IN_PACKET                  (uint32_t)((((48000/1000)+2)*8)*2)
+#define AUDIO_IN_PACKET_BYTES                        ((((48000U/1000U) + 1U) * 2U) * 2U) // 1mS 48kHz 16bit stereo
+//#define AUDIO_IN_PACKET_BYTES                  		((((48000U/1000U) + 2U) * 8U) * 2U)
 #define MIC_IN_TERMINAL_ID                            1
 #define MIC_FU_ID                                     2
 #define MIC_OUT_TERMINAL_ID                           3

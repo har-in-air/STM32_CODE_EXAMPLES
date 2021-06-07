@@ -112,15 +112,9 @@ static uint8_t USBD_AUDIO_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx) {
 
   ((USBD_AUDIO_ItfTypeDef*) pdev->pUserData)->Init(haudio->frequency, 0, haudio->channels);
 
-  USBD_LL_OpenEP(pdev,
-  AUDIO_IN_EP,
-  USBD_EP_TYPE_ISOC,
-  AUDIO_IN_PACKET);
-
+  USBD_LL_OpenEP(pdev,  AUDIO_IN_EP,  USBD_EP_TYPE_ISOC,  AUDIO_IN_PACKET_BYTES);
   USBD_LL_FlushEP(pdev, AUDIO_IN_EP);
-
   USBD_LL_Transmit(pdev, AUDIO_IN_EP, IsocInBuffDummy, packet_dim);
-
   haudio->state = STATE_USB_IDLE;
   return USBD_OK;
 }
