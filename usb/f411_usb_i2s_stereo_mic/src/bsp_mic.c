@@ -1,27 +1,39 @@
 #include "main.h"
 #include "bsp_mic.h"
+#include "vol_ctrl.h"
 
-// Each INMP441 I2S microphone sample is 64bits (32 L frame, 32 R frame) i.e. 4 half-words.
+// We process 10mS worth of samples at a time as we want to use the SVC/GREQ STM32 libraries
+// Sampling rate 48000Hz
 
-// SampleBuffer is a circular buffer. When DMA half complete callback is received
-// the first half of SampleBuffer is processed to extract 16bit L and R channel data and
-// send it to the USB controller.
-// When the DMA complete callback is received, the second half
-// of SampleBuffer is processed and the 16bit data is sent to the USB controller.
+// Each INMP441 I2S microphone sample is 64bits (L channel 24bits in a 32bit frame, R channel 24bits in a 32bit frame)
+// i.e.  each microphone sample requires 4 * uint16_t.
+// The microphone samples are received into I2SRcvBuffer. This is a circular buffer with 20mS of samples.
+// When DMA half complete callback is received  the first 10mS half of I2SRcvBuffer is processed
+// to extract 16bit L and 16bit R channel data, process it (volume/equalization etc.) and then
+// transmit it to the USB controller.
+// Similarly, when the DMA complete callback is received, the second 10mS half of I2SRcvBuffer is processed
+// to extract the 16bit stereo data and transmit it to the USB controller.
 // This repeats in a circular loop.
-// The full buffer contains 20mS of samples = 7680 bytes
-static volatile uint16_t SampleBuffer[MIC_SAMPLES_PER_PACKET * 2 * 2];
 
-// ProcessBuffer contains the extracted L and R 16bit samples from the 1/2 SampleBuffer that is processed
-// at DMA callback
-// 1920 bytes
-static int16_t ProcessBuffer[MIC_SAMPLES_PER_PACKET];
+// Input I2S 24/32 stereo format => for (10mS+10mS) circular buffer
+// we need [(48000/1000) * 10 * 2 * 2] * 2 = 3840 uint16_t's
 
-// SendBuffer contains the L and R 16bit samples being transmitted to the USB controller. First half
-// of the buffer is transmitted at DMA half complete callback, second half at DMA complete
-// callback
-// 3840 bytes
-static int16_t SendBuffer[MIC_SAMPLES_PER_PACKET*2];
+#define I2S_RCV_BUFFER_10MS_SIZE_HWORDS   (48 * 10 * 2 * 2)
+
+static volatile uint16_t I2SRcvBuffer[I2S_RCV_BUFFER_10MS_SIZE_HWORDS * 2];
+
+// ProcessBuffer contains 10mS of extracted L and R 16bit samples from the 1/2 I2SRcvBuffer that is processed
+// every DMA half-complete or complete callback
+// Output 16bit stereo => for 10ms buffer we need (48000/1000) * 10 * 2 = 960 uint16_t's
+
+#define PROCESS_BUFFER_10MS_SIZE_HWORDS   (48 * 10 * 2)
+
+static int16_t ProcessBuffer[PROCESS_BUFFER_10MS_SIZE_HWORDS];
+
+// USBTxBuffer contains the 10mS of L and R 16bit samples being transmitted to the USB controller. This also
+// needs to be double buffered, as first half of the buffer is transmitted at DMA half complete callback,
+// second half at DMA complete callback
+static int16_t USBTxBuffer[PROCESS_BUFFER_10MS_SIZE_HWORDS * 2];
 
 static int IsRunning = false;
 static int IsMuted = false;
@@ -30,19 +42,20 @@ static void bsp_mic_send_data(volatile uint16_t *data_in, int16_t *data_out);
 
 
 void bsp_mic_init(){
+	vol_init();
 	IsRunning = false;
 	IsMuted = false;
 	bsp_mic_set_led();
 	}
 
 
-// Start the I2S DMA transfer (called from usbd_audio_if.cpp)
+// Start the I2S DMA transfer into the circular I2SRcvBuffer
+// called from usbd_audio_if.c
 inline HAL_StatusTypeDef bsp_mic_start() {
 	HAL_StatusTypeDef status;
-	// For I2S 24/32 data format, we need to specify the transfer size in words.
-	// HAL will internally multiply by 2 to transfer size*2 half-words
-	// This is the size of the entire circular buffer
-	if ((status = HAL_I2S_Receive_DMA(&hi2s1, (uint16_t*)SampleBuffer, MIC_SAMPLES_PER_PACKET * 2)) == HAL_OK) {
+	// For I2S 24/32 data format, the HAL api requires us to specify the transfer size in words.
+	// Size of the entire circular buffer in words = (I2S_RCV_BUFFER_10MS_SIZE_HWORDS*2)/2
+	if ((status = HAL_I2S_Receive_DMA(&hi2s1, (uint16_t*)I2SRcvBuffer, I2S_RCV_BUFFER_10MS_SIZE_HWORDS)) == HAL_OK) {
 		IsRunning = true;
 		}
 	return status;
@@ -104,54 +117,48 @@ inline void bsp_mic_set_volume(int16_t volume) {
 	if (volume > 72) {
 		volume = 72;
 		}
+//	vol_set_volume(volume);
 	}
 
 
-// 1. Transform the current half-SampleBuffer I2S data into 16 bit PCM samples in a holding buffer
+// 1. Transform the current half-I2SRcvBuffer I2S data into 16 bit PCM samples in a holding buffer
 // 2. Transmit over USB to the host
 // We've got 10ms to complete this method before the next DMA transfer will be ready.
 inline void bsp_mic_send_data(volatile uint16_t *data_in, int16_t *data_out) {
 	// send if we're not muted and we're connected
 	if ((!IsMuted) && IsRunning) {
-		// incoming 64 bit I2S microphone sample is packaged as 24bits left-justified in 32bit frame, L channel then R channel
+		// incoming 64 bit stereo I2S microphone sample is packaged as 24bits left-justified in 32bit frame. L channel then R channel
 		// data_in[n]   = L 16MSb
 		// data_in[n+1] = L 8LSb + pad byte
 		// data_in[n+2] = R 16MSb
 		// data_in[n+3] = R 8LSb + pad byte
 		// extract the L and R channel 16 MSbits
-		int16_t *dest = ProcessBuffer;
-		int cnt = MIC_SAMPLES_PER_PACKET / 2;
-		while (cnt--) {
-			*dest++ = 8*(int16_t)data_in[0];     // 16MSb from 24bit L channel, +12dB
-			*dest++ = 8*(int16_t)data_in[2];     // 16MSb from 24bit R channel, +12dB
-			data_in += 4;
+		for (int inx = 0; inx < PROCESS_BUFFER_10MS_SIZE_HWORDS; inx++) {
+			ProcessBuffer[inx] = 4*(int16_t)data_in[inx*2];     // 16MSb from each channel, *4 => +12dB
 			}
+
+		// specify the number of stereo samples for processing
+		//vol_process_buffer(ProcessBuffer, PROCESS_BUFFER_10MS_SIZE_HWORDS/2);
 
 #if 1
 		// process the L and R 16bit samples
-		{
-		int16_t *src = ProcessBuffer;
-		cnt = MIC_SAMPLES_PER_PACKET/2;
-		while (cnt--) {
-			int16_t near = *src; // l channel is mic pointing towards speaker
-			int16_t far = *(src+1); // r channel is mic pointing away from speaker
-			*src = 2*near - far;
-			*(src+1) = 2*far - near;
-			src += 2;
+		for (int inx = 0; inx < PROCESS_BUFFER_10MS_SIZE_HWORDS/2; inx += 2) {
+			int16_t near = ProcessBuffer[inx]; // l channel is mic pointing towards speaker
+			int16_t far = ProcessBuffer[inx+1]; // r channel is mic pointing away from speaker
+			ProcessBuffer[inx] = 2*near - far;
+			ProcessBuffer[inx+1] = 2*far - near;
 			}
-		}
+
 #endif
 
-		// copy the L & R data from the processed buffer to SendBuffer
-		int16_t *src = ProcessBuffer;
-		dest = data_out;
-		cnt = MIC_SAMPLES_PER_PACKET;
-		while (cnt--) {
-			*dest++ = *src++;
+		// copy the L & R data from the processed buffer to USBTxBuffer
+		for (int inx = 0; inx < PROCESS_BUFFER_10MS_SIZE_HWORDS; inx++) {
+			data_out[inx] = ProcessBuffer[inx];
 			}
 
-		// send the 10mS of processed L and R samples  to the usb controller
-		if (USBD_AUDIO_Data_Transfer(&hUsbDeviceFS, data_out, MIC_SAMPLES_PER_PACKET) != USBD_OK) {
+		// transmit the buffer  to the usb controller
+		// here we need to specify the number of stereo samples
+		if (USBD_AUDIO_Data_Transfer(&hUsbDeviceFS, data_out, PROCESS_BUFFER_10MS_SIZE_HWORDS/2) != USBD_OK) {
 			Error_Handler();
 			}
 		}
@@ -159,15 +166,15 @@ inline void bsp_mic_send_data(volatile uint16_t *data_in, int16_t *data_out) {
 
 
 
-// I2S DMA half-complete HAL callback to process the first MIC_MS_PER_PACKET/2  milliseconds (10ms)
-// of the data while the DMA device continues to run onward to fill the second half of the buffer.
+// I2S DMA half-complete HAL callback to process the first 10mS of the data while the
+// DMA device continues to run onward to fill the second half of the buffer.
 inline void bsp_mic_i2s_half_complete() {
-	bsp_mic_send_data(SampleBuffer, SendBuffer);
+	bsp_mic_send_data(I2SRcvBuffer, USBTxBuffer);
 	}
 
 
-// I2S DMA complete HAL callback to process the second MIC_MS_PER_PACKET/2 milliseconds
-// of the data while the DMA in circular mode wraps back to the start of the buffer
+// I2S DMA complete HAL callback to process the second 10mS
+// of the data while the DMA  fills the first half of the buffer
 inline void bsp_mic_i2s_complete() {
-	bsp_mic_send_data(&SampleBuffer[MIC_SAMPLES_PER_PACKET*2], &SendBuffer[MIC_SAMPLES_PER_PACKET]);
+	bsp_mic_send_data(&I2SRcvBuffer[I2S_RCV_BUFFER_10MS_SIZE_HWORDS], &USBTxBuffer[PROCESS_BUFFER_10MS_SIZE_HWORDS]);
 	}

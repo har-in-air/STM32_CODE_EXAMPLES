@@ -529,7 +529,7 @@ uint8_t USBD_AUDIO_Data_Transfer(USBD_HandleTypeDef *pdev, int16_t *audioData, u
 	if (haudioInstance.state == STATE_USB_WAITING_FOR_INIT) {
 		return USBD_BUSY;
 		}
-	uint16_t dataAmount = PCMSamples * 2; //Bytes
+	uint16_t dataAmount = PCMSamples * 2 * haudio->channels; //Bytes
 	uint16_t true_dim = haudio->buffer_length;
 	uint16_t current_data_Amount = haudio->dataAmount;
 	uint16_t packet_dim = haudio->packetDimension;
