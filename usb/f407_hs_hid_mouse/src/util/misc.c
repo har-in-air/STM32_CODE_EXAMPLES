@@ -1,6 +1,5 @@
-#include "../../inc/util/misc.h"
-
-#include "../../inc/util/logger.h"
+#include "util/misc.h"
+#include "util/logger.h"
 
 uint32_t SystemCoreClock;// declared in system_stm32f4xx.h
 

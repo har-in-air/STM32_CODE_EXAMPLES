@@ -1,10 +1,8 @@
-#include "../../inc/util/logger.h"
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdint.h>
-
-#include "../../inc/cmsis/device/stm32f4xx.h"
+#include "cmsis/device/stm32f4xx.h"
+#include "util/logger.h"
 
 LOG_LEVEL_e System_Log_Level = LOG_LEVEL_INFO;
 
