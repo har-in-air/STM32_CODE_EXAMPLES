@@ -332,9 +332,8 @@ static void usbd_refresh_fifo_start_addresses() {
 // so data access is word sized
 static void usbd_configure_rxfifo_size(uint16_t sizeBytes) {
 	// 10 words reserved for receiving SETUP packets on control endpoint
-	// 1 word for receiving global OUT NAK
 	// at least 2 *(largest size packet in words) + 1 word for status written to fifo with each received packet
-	uint16_t sizeWords = 10 + 1 + (2 * ((sizeBytes / 4) + 1));
+	uint16_t sizeWords = 10 + (2 * ((sizeBytes / 4) + 1));
 	// Configures the depth of the FIFO.
 	MODIFY_REG(USB_OTG_FS->GRXFSIZ,
 		USB_OTG_GRXFSIZ_RXFD,
