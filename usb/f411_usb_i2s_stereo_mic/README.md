@@ -5,7 +5,7 @@ This is configured as bus-powered, with no VBUS sensing i.e. the device assumes 
 
 ## Credits
 
-* [Andy Brown's USB microphone](https://andybrown.me.uk/2021/03/13/usb-microphone/). I have refactored the code as a C project, and extended it from mono to stereo microphone recording.
+* [Andy Brown's USB microphone](https://andybrown.me.uk/2021/03/13/usb-microphone/). I have refactored the code as a C project, extended it from mono to stereo microphone recording, and am using the internal I2S PLL to generate the clocks.
 
 ## Development Environment
 
