@@ -1,3 +1,6 @@
+# Credit : Mohammed Noureldin
+# https://www.udemy.com/course/usb-behind-the-scenes-hands-on-hid-firmware-development/
+
 # Installs Wireshark and its dependencies.
 
 sudo apt install wireshark
