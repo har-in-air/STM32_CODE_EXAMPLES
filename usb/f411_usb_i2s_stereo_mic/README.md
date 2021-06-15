@@ -5,7 +5,12 @@ This is configured as bus-powered, with no VBUS sensing i.e. the device assumes 
 
 ## Credits
 
-* [Andy Brown's USB microphone](https://andybrown.me.uk/2021/03/13/usb-microphone/). I have refactored the code as a C project, extended it from mono to stereo microphone recording, and am using the internal I2S PLL to generate the clocks.
+* [Andy Brown's USB microphone](https://andybrown.me.uk/2021/03/13/usb-microphone/). I have 
+  * refactored the code as a C project
+  * extended it from mono to stereo 48kHz 16-bit microphone recording
+  * used the internal I2S PLL to generate the clocks
+  * removed the software volume control and equalizer libraries which require 10mS audio buffers to work with - I am using 1mS buffers.
+  * optimized the txfifo buffer size for recording
 
 ## Development Environment
 
@@ -30,7 +35,7 @@ This is configured as bus-powered, with no VBUS sensing i.e. the device assumes 
   * half-duplex master receive
   * internal PLL generates the BCK and WS clocks to the microphones
   * 24/32 I2S Philips standard
-* In the demo code bsp_mic.c, the two microphones are not used in the traditional stereo L and R configuration. The L microphone
-is assumed to be pointing towards the speaker, and the R microphone points 180 degrees away from the speaker. The L and R data are processed to exaggerate the lobing, i.e. L_channel = 2*L_channel - R_channel, and R channel = 2*R_channel  - L_channel. This was just done as an example. 
+  * the internal I2S PLL clock generates an actual Fs = 47.048kHz when configured for Fs = 48kHz
+* In bsp_mic.c, a level boost of +12dB is applied to the incoming microphone data. Multiplying the 2's complement pcm data by a factor of 2 is equivalent to a +6dB boost (20*log10(2))
 * I used Audacity on my Ubuntu PC to record and playback the stereo audio. 
 
