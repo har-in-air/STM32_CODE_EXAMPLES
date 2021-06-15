@@ -46,7 +46,7 @@
 #define VOL_MAX                                       9216      // 36dB (1 == 1/256dB)
 
 #define AUDIO_IN_PACKET_BYTES                        ((((48000U/1000U) + 1U) * 2U) * 2U) // 1mS 48kHz 16bit stereo
-//#define AUDIO_IN_PACKET_BYTES                  		((((48000U/1000U) + 2U) * 8U) * 2U)
+
 #define MIC_IN_TERMINAL_ID                            1
 #define MIC_FU_ID                                     2
 #define MIC_OUT_TERMINAL_ID                           3
