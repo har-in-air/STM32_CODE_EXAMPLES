@@ -37,5 +37,6 @@ This is configured as bus-powered, with no VBUS sensing i.e. the device assumes 
   * 24/32 I2S Philips standard
   * the internal I2S PLL clock generates an actual Fs = 47.048kHz when configured for Fs = 48kHz
 * In bsp_mic.c, a level boost of +12dB is applied to the incoming microphone data. Multiplying the 2's complement pcm data by a factor of 2 is equivalent to a +6dB boost (20*log10(2))
-* I used Audacity on my Ubuntu PC to record and playback the stereo audio. 
+* I used Audacity on my Ubuntu PC to record and playback the stereo audio. Example below is for a voice recording "Testing 1, 2, 3, 4".
 
+<img src="recording.png" />
