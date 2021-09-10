@@ -17,12 +17,14 @@
   ******************************************************************************
   */
 
+// ADC to DAC data transfer via DMA on STM32F407VGT6
+// Both ADC and DAC are triggered by TIM2, configured for a sampling frequency of 24kHz
 // Credits : https://www.youtube.com/watch?v=ThFfI-JSv2Y
-// Note that the code shown in this video requires a couple of fixes, implemented below :
-// 1. The ADC and DAC DMAs are started simultaneously, so the pointers need to start at
-// the same location in both input and output DMA buffers.
+// Note that the code shown in this tutorial video requires a couple of fixes, implemented here :
+// 1. The ADC and DAC DMAs are started simultaneously, so the input and output buffer pointers 
+// need to be at the same location in input and output DMA buffers.
 // 2. The process_data() function should not be called continuously. It needs to be triggered
-// by a flag set in the conv_half_complete() and conv_complete() callbacks.
+// by a flag set in the dma_conv_half_complete() and dma_conv_complete() callbacks.
 
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
